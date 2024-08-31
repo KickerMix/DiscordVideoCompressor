@@ -1,5 +1,8 @@
 # Discord Video Compressor
 
+## Other Languages
+- [Русская версия](./README_RU.md)
+
 ## Overview
 
 The Discord Video Compressor is a Windows application designed to compress video files to meet Discord's file size limits. The tool utilizes `ffmpeg` to compress videos, offering pre-configured size presets and the option to specify custom sizes.
