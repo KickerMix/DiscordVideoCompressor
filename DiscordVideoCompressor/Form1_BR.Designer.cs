@@ -56,9 +56,14 @@ namespace DiscordVideoCompressor
             this.numericGlitchLength = new System.Windows.Forms.NumericUpDown();
             this.labelGlitchChance = new System.Windows.Forms.Label();
             this.numericGlitchChance = new System.Windows.Forms.NumericUpDown();
+            this.statusStrip1 = new System.Windows.Forms.StatusStrip();
+            this.statusLabelStage = new System.Windows.Forms.ToolStripStatusLabel();
+            this.statusLabelTime = new System.Windows.Forms.ToolStripStatusLabel();
+            this.statusLabelSpeed = new System.Windows.Forms.ToolStripStatusLabel();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericGlitchLength)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericGlitchChance)).BeginInit();
+            this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // button1
@@ -461,13 +466,50 @@ namespace DiscordVideoCompressor
             0});
             this.numericGlitchChance.Visible = false;
             // 
+            // statusStrip1
+            // 
+            this.statusStrip1.BackColor = System.Drawing.Color.Black;
+            this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.statusLabelStage,
+            this.statusLabelTime,
+            this.statusLabelSpeed});
+            this.statusStrip1.Location = new System.Drawing.Point(0, 288);
+            this.statusStrip1.Name = "statusStrip1";
+            this.statusStrip1.Size = new System.Drawing.Size(584, 22);
+            this.statusStrip1.SizingGrip = false;
+            this.statusStrip1.TabIndex = 31;
+            this.statusStrip1.Text = "statusStrip1";
+            // 
+            // statusLabelStage
+            // 
+            this.statusLabelStage.ForeColor = System.Drawing.Color.LightSkyBlue;
+            this.statusLabelStage.Name = "statusLabelStage";
+            this.statusLabelStage.Size = new System.Drawing.Size(383, 17);
+            this.statusLabelStage.Spring = true;
+            this.statusLabelStage.Text = "Stage: Idle";
+            this.statusLabelStage.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // statusLabelTime
+            // 
+            this.statusLabelTime.ForeColor = System.Drawing.Color.LightSkyBlue;
+            this.statusLabelTime.Name = "statusLabelTime";
+            this.statusLabelTime.Size = new System.Drawing.Size(98, 17);
+            this.statusLabelTime.Text = "--:-- / --:--";
+            // 
+            // statusLabelSpeed
+            // 
+            this.statusLabelSpeed.ForeColor = System.Drawing.Color.LightSkyBlue;
+            this.statusLabelSpeed.Name = "statusLabelSpeed";
+            this.statusLabelSpeed.Size = new System.Drawing.Size(88, 17);
+            this.statusLabelSpeed.Text = "Speed: --";
+            // 
             // Form1
             // 
             this.AllowDrop = true;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(42)))), ((int)(((byte)(42)))), ((int)(((byte)(42)))));
-            this.ClientSize = new System.Drawing.Size(584, 280);
+            this.ClientSize = new System.Drawing.Size(584, 310);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.comboBoxvideoFPS);
             this.Controls.Add(this.label6);
@@ -496,6 +538,7 @@ namespace DiscordVideoCompressor
             this.Controls.Add(this.button3);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.button1);
+            this.Controls.Add(this.statusStrip1);
             this.ForeColor = System.Drawing.SystemColors.ButtonFace;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Name = "Form1";
@@ -504,6 +547,8 @@ namespace DiscordVideoCompressor
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericGlitchLength)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericGlitchChance)).EndInit();
+            this.statusStrip1.ResumeLayout(false);
+            this.statusStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -539,5 +584,9 @@ namespace DiscordVideoCompressor
         private System.Windows.Forms.NumericUpDown numericGlitchLength;
         private System.Windows.Forms.Label labelGlitchChance;
         private System.Windows.Forms.NumericUpDown numericGlitchChance;
+        private System.Windows.Forms.StatusStrip statusStrip1;
+        private System.Windows.Forms.ToolStripStatusLabel statusLabelStage;
+        private System.Windows.Forms.ToolStripStatusLabel statusLabelTime;
+        private System.Windows.Forms.ToolStripStatusLabel statusLabelSpeed;
     }
 }

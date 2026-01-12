@@ -241,6 +241,123 @@ namespace DiscordVideoCompressor.Resources {
         }
 
         /// <summary>
+        ///   Ищет локализованную строку, похожую на Stage:.
+        /// </summary>
+        internal static string ProgressStageLabelText {
+            get {
+                return ResourceManager.GetString("ProgressStageLabelText", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Idle.
+        /// </summary>
+        internal static string ProgressStageIdleText {
+            get {
+                return ResourceManager.GetString("ProgressStageIdleText", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Preparing.
+        /// </summary>
+        internal static string ProgressStagePrepare {
+            get {
+                return ResourceManager.GetString("ProgressStagePrepare", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Glitch pass.
+        /// </summary>
+        internal static string ProgressStageGlitch {
+            get {
+                return ResourceManager.GetString("ProgressStageGlitch", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Speed pass.
+        /// </summary>
+        internal static string ProgressStageSpeed {
+            get {
+                return ResourceManager.GetString("ProgressStageSpeed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Pass 1/2.
+        /// </summary>
+        internal static string ProgressStagePass1 {
+            get {
+                return ResourceManager.GetString("ProgressStagePass1", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Pass 2/2.
+        /// </summary>
+        internal static string ProgressStagePass2 {
+            get {
+                return ResourceManager.GetString("ProgressStagePass2", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Datamosh encode.
+        /// </summary>
+        internal static string ProgressStageDatamoshEncode {
+            get {
+                return ResourceManager.GetString("ProgressStageDatamoshEncode", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Datamosh transform.
+        /// </summary>
+        internal static string ProgressStageDatamoshTransform {
+            get {
+                return ResourceManager.GetString("ProgressStageDatamoshTransform", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Datamosh remux.
+        /// </summary>
+        internal static string ProgressStageDatamoshRemux {
+            get {
+                return ResourceManager.GetString("ProgressStageDatamoshRemux", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на ETA.
+        /// </summary>
+        internal static string ProgressEtaLabelText {
+            get {
+                return ResourceManager.GetString("ProgressEtaLabelText", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Speed.
+        /// </summary>
+        internal static string ProgressSpeedLabelText {
+            get {
+                return ResourceManager.GetString("ProgressSpeedLabelText", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на --:-- / --:--.
+        /// </summary>
+        internal static string ProgressTimeIdleText {
+            get {
+                return ResourceManager.GetString("ProgressTimeIdleText", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Ищет локализованную строку, похожую на Jump length (s).
         /// </summary>
         internal static string GlitchJumpLengthLabelText {

@@ -144,6 +144,45 @@
   <data name="BrainrotGlitchEffectText" xml:space="preserve">
     <value>Glitch</value>
   </data>
+  <data name="ProgressStageLabelText" xml:space="preserve">
+    <value>Stage:</value>
+  </data>
+  <data name="ProgressStageIdleText" xml:space="preserve">
+    <value>Idle</value>
+  </data>
+  <data name="ProgressStagePrepare" xml:space="preserve">
+    <value>Preparing</value>
+  </data>
+  <data name="ProgressStageGlitch" xml:space="preserve">
+    <value>Glitch pass</value>
+  </data>
+  <data name="ProgressStageSpeed" xml:space="preserve">
+    <value>Speed pass</value>
+  </data>
+  <data name="ProgressStagePass1" xml:space="preserve">
+    <value>Pass 1/2</value>
+  </data>
+  <data name="ProgressStagePass2" xml:space="preserve">
+    <value>Pass 2/2</value>
+  </data>
+  <data name="ProgressStageDatamoshEncode" xml:space="preserve">
+    <value>Datamosh encode</value>
+  </data>
+  <data name="ProgressStageDatamoshTransform" xml:space="preserve">
+    <value>Datamosh transform</value>
+  </data>
+  <data name="ProgressStageDatamoshRemux" xml:space="preserve">
+    <value>Datamosh remux</value>
+  </data>
+  <data name="ProgressEtaLabelText" xml:space="preserve">
+    <value>ETA</value>
+  </data>
+  <data name="ProgressSpeedLabelText" xml:space="preserve">
+    <value>Speed</value>
+  </data>
+  <data name="ProgressTimeIdleText" xml:space="preserve">
+    <value>--:-- / --:--</value>
+  </data>
   <data name="GlitchJumpLengthLabelText" xml:space="preserve">
     <value>Jump length (s)</value>
   </data>

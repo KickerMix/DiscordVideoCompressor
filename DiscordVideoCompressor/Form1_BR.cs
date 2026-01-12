@@ -19,6 +19,16 @@ namespace DiscordVideoCompressor
         private CancellationTokenSource cancellationTokenSource;
         private Process ffmpegProcess;
         private string extractedFfmpegPath;
+        private double progressStageStart;
+        private double progressStageSpan = 1.0;
+        private double progressStageDuration;
+        private bool progressStageHasProgress;
+        private double progressLastPercent;
+        private double progressLastSpeed;
+        private double progressCurrentSeconds;
+        private double progressTotalSeconds;
+        private double? progressEtaSeconds;
+        private string progressStageName;
 
         private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 
@@ -186,6 +196,7 @@ namespace DiscordVideoCompressor
             labelGlitchLength.Text = Resources.Strings.GlitchJumpLengthLabelText;
             labelGlitchChance.Text = Resources.Strings.GlitchChanceLabelText;
             UpdateSelectedFileLabel();
+            ApplyProgressText();
 
             foreach (Control control in this.Controls)
             {
@@ -440,6 +451,8 @@ namespace DiscordVideoCompressor
                     return;
                 }
 
+                SetProgressStage(Resources.Strings.ProgressStagePrepare, 0.0, 0.0, false, duration);
+
                 if (enableDatamosh && enableSpeedEffect)
                 {
                     Invoke((Action)(() =>
@@ -549,6 +562,14 @@ namespace DiscordVideoCompressor
 
                         string pass1Args;
                         string pass2Args;
+                        string pass1StageName = null;
+                        double pass1StageStart = 0;
+                        double pass1StageSpan = 1;
+                        bool pass1HasProgress = true;
+                        string pass2StageName = null;
+                        double pass2StageStart = 0.5;
+                        double pass2StageSpan = 0.5;
+                        bool pass2HasProgress = true;
 
                         if (enableSpeedEffect && enableGlitchEffect)
                         {
@@ -564,6 +585,7 @@ namespace DiscordVideoCompressor
                                 : "";
 
                             string glitchArgs = $"-i \"{inputFile}\" -filter_complex_script \"{glitchScriptPath}\" -map \"{glitchVLabel}\" -map \"{glitchALabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{glitchRateArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{glitchIntermediate}\"";
+                            SetProgressStage(Resources.Strings.ProgressStageGlitch, 0.0, 0.5, true, duration);
                             if (!RunFfmpegProcess(ffmpegPath, glitchArgs, token, true, duration, out StringBuilder glitchOutput))
                             {
                                 Invoke((Action)(() =>
@@ -581,6 +603,9 @@ namespace DiscordVideoCompressor
 
                             pass1Args = $"-i \"{glitchIntermediate}\" -filter_complex_script \"{speedScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{speedRateArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
+                            pass1StageName = Resources.Strings.ProgressStageSpeed;
+                            pass1StageStart = 0.5;
+                            pass1StageSpan = 0.5;
                         }
                         else if (enableSpeedEffect)
                         {
@@ -592,6 +617,9 @@ namespace DiscordVideoCompressor
 
                             pass1Args = $"-i \"{inputFile}\" -filter_complex_script \"{filterScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
+                            pass1StageName = Resources.Strings.ProgressStageSpeed;
+                            pass1StageStart = 0.0;
+                            pass1StageSpan = 1.0;
                         }
                         else if (enableDatamosh && enableGlitchEffect)
                         {
@@ -599,7 +627,7 @@ namespace DiscordVideoCompressor
                             Directory.CreateDirectory(tempDir);
                             datamoshIntermediate = Path.Combine(tempDir, $"datamosh_glitch_{Guid.NewGuid():N}.mp4");
 
-                            if (!RunTrueDatamoshPipeline(ffmpegPath, inputFile, datamoshIntermediate, currentVideoBitrate, audioBitrate, audioSampleRate, audioBitDepth, videoResolution, videoFps, duration, datamoshSeed, token, out StringBuilder datamoshOutput, out bool datamoshHasAudio))
+                            if (!RunTrueDatamoshPipeline(ffmpegPath, inputFile, datamoshIntermediate, currentVideoBitrate, audioBitrate, audioSampleRate, audioBitDepth, videoResolution, videoFps, duration, datamoshSeed, 0.0, 0.6, token, out StringBuilder datamoshOutput, out bool datamoshHasAudio))
                             {
                                 Invoke((Action)(() =>
                                 {
@@ -625,10 +653,13 @@ namespace DiscordVideoCompressor
 
                             pass1Args = $"-i \"{datamoshIntermediate}\" -filter_complex_script \"{filterScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
+                            pass1StageName = Resources.Strings.ProgressStageGlitch;
+                            pass1StageStart = 0.6;
+                            pass1StageSpan = 0.4;
                         }
                         else if (enableDatamosh)
                         {
-                            if (!RunTrueDatamoshPipeline(ffmpegPath, inputFile, outputFileTemp, currentVideoBitrate, audioBitrate, audioSampleRate, audioBitDepth, videoResolution, videoFps, duration, datamoshSeed, token, out StringBuilder datamoshOutput, out bool datamoshHasAudio))
+                            if (!RunTrueDatamoshPipeline(ffmpegPath, inputFile, outputFileTemp, currentVideoBitrate, audioBitrate, audioSampleRate, audioBitDepth, videoResolution, videoFps, duration, datamoshSeed, 0.0, 1.0, token, out StringBuilder datamoshOutput, out bool datamoshHasAudio))
                             {
                                 Invoke((Action)(() =>
                                 {
@@ -659,15 +690,28 @@ namespace DiscordVideoCompressor
 
                             pass1Args = $"-i \"{inputFile}\" -filter_complex_script \"{filterScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
+                            pass1StageName = Resources.Strings.ProgressStageGlitch;
+                            pass1StageStart = 0.0;
+                            pass1StageSpan = 1.0;
                         }
                         else
                         {
                             passLogFileBase = CreatePassLogFileBase();
                             pass1Args = $"-i \"{inputFile}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{fpsArg}{videoFilterArg} -preset veryfast{pixelFormatArg} -pass 1 -passlogfile \"{passLogFileBase}\" -an -f null NUL";
                             pass2Args = $"-i \"{inputFile}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{fpsArg}{videoFilterArg} -pass 2 -passlogfile \"{passLogFileBase}\" -b:a {audioBitrate} -c:a {codecAudio}{audioFilterArg} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
+                            pass1StageName = Resources.Strings.ProgressStagePass1;
+                            pass1StageStart = 0.0;
+                            pass1StageSpan = 0.5;
+                            pass2StageName = Resources.Strings.ProgressStagePass2;
+                            pass2StageStart = 0.5;
+                            pass2StageSpan = 0.5;
                         }
                         if (!string.IsNullOrWhiteSpace(pass1Args))
                         {
+                            if (!string.IsNullOrWhiteSpace(pass1StageName))
+                            {
+                                SetProgressStage(pass1StageName, pass1StageStart, pass1StageSpan, pass1HasProgress, duration);
+                            }
                             if (!RunFfmpegProcess(ffmpegPath, pass1Args, token, true, duration, out StringBuilder pass1Output))
                             {
                                 Invoke((Action)(() =>
@@ -680,6 +724,10 @@ namespace DiscordVideoCompressor
 
                         if (!string.IsNullOrWhiteSpace(pass2Args))
                         {
+                            if (!string.IsNullOrWhiteSpace(pass2StageName))
+                            {
+                                SetProgressStage(pass2StageName, pass2StageStart, pass2StageSpan, pass2HasProgress, duration);
+                            }
                             if (!RunFfmpegProcess(ffmpegPath, pass2Args, token, true, duration, out StringBuilder pass2Output))
                             {
                                 Invoke((Action)(() =>
@@ -768,6 +816,7 @@ namespace DiscordVideoCompressor
             SetDefaultSelections();
             UpdateSelectedFileLabel();
             UpdateGlitchControlsVisibility();
+            ResetProgressStatus();
         }
 
         private void comboBoxSampleRate_SelectedIndexChanged(object sender, EventArgs e)
@@ -810,6 +859,8 @@ namespace DiscordVideoCompressor
             if (!isRunning)
             {
                 progressBar1.Value = 0;
+                progressBar1.Style = ProgressBarStyle.Continuous;
+                ResetProgressStatus();
             }
         }
 
@@ -822,6 +873,141 @@ namespace DiscordVideoCompressor
             }
 
             label1.Text = Resources.Strings.SelectedFileLabelText + Path.GetFileName(inputFile);
+        }
+
+        private void ResetProgressStatus()
+        {
+            progressStageName = Resources.Strings.ProgressStageIdleText;
+            progressStageStart = 0;
+            progressStageSpan = 1;
+            progressStageDuration = 0;
+            progressStageHasProgress = false;
+            progressLastPercent = 0;
+            progressLastSpeed = 0;
+            progressCurrentSeconds = 0;
+            progressTotalSeconds = 0;
+            progressEtaSeconds = null;
+
+            ApplyProgressText();
+        }
+
+        private void SetProgressStage(string stageName, double stageStart, double stageSpan, bool hasProgress, double stageDuration)
+        {
+            progressStageName = stageName;
+            progressStageStart = Math.Max(0.0, Math.Min(1.0, stageStart));
+            progressStageSpan = Math.Max(0.0, Math.Min(1.0, stageSpan));
+            progressStageHasProgress = hasProgress;
+            progressStageDuration = stageDuration;
+            progressCurrentSeconds = 0;
+            progressTotalSeconds = hasProgress ? stageDuration : 0;
+            progressEtaSeconds = null;
+            progressLastSpeed = 0;
+            progressLastPercent = progressStageStart * 100.0;
+
+            BeginInvoke((Action)(() =>
+            {
+                progressBar1.Style = hasProgress ? ProgressBarStyle.Continuous : ProgressBarStyle.Marquee;
+                if (hasProgress)
+                {
+                    progressBar1.Value = (int)Math.Max(0, Math.Min(100, progressLastPercent));
+                }
+                ApplyProgressText();
+            }));
+        }
+
+        private void UpdateProgress(double currentSeconds, double? speedValue)
+        {
+            if (!progressStageHasProgress || progressStageDuration <= 0)
+            {
+                return;
+            }
+
+            double stageProgress = Math.Max(0.0, Math.Min(1.0, currentSeconds / progressStageDuration));
+            double overallProgress = progressStageStart + stageProgress * progressStageSpan;
+            double percent = overallProgress * 100.0;
+            if (percent < progressLastPercent)
+            {
+                percent = progressLastPercent;
+            }
+            progressLastPercent = percent;
+
+            progressCurrentSeconds = Math.Min(currentSeconds, progressStageDuration);
+            progressTotalSeconds = progressStageDuration;
+
+            if (speedValue.HasValue && speedValue.Value > 0)
+            {
+                progressLastSpeed = speedValue.Value;
+                double remaining = Math.Max(0.0, progressStageDuration - currentSeconds);
+                progressEtaSeconds = remaining / speedValue.Value;
+            }
+            else if (progressLastSpeed > 0)
+            {
+                double remaining = Math.Max(0.0, progressStageDuration - currentSeconds);
+                progressEtaSeconds = remaining / progressLastSpeed;
+            }
+            else
+            {
+                progressEtaSeconds = null;
+            }
+
+            BeginInvoke((Action)(() =>
+            {
+                progressBar1.Value = (int)Math.Max(0, Math.Min(100, percent));
+                ApplyProgressText();
+            }));
+        }
+
+        private void ApplyProgressText()
+        {
+            if (statusLabelStage == null || statusLabelTime == null || statusLabelSpeed == null)
+            {
+                return;
+            }
+
+            string stageText = string.IsNullOrWhiteSpace(progressStageName)
+                ? Resources.Strings.ProgressStageIdleText
+                : progressStageName;
+            statusLabelStage.Text = $"{Resources.Strings.ProgressStageLabelText} {stageText}";
+            statusLabelTime.Text = FormatProgressTime(progressCurrentSeconds, progressTotalSeconds, progressEtaSeconds);
+
+            if (progressLastSpeed > 0)
+            {
+                statusLabelSpeed.Text = $"{Resources.Strings.ProgressSpeedLabelText}: {progressLastSpeed.ToString("0.0", CultureInfo.InvariantCulture)}x";
+            }
+            else
+            {
+                statusLabelSpeed.Text = $"{Resources.Strings.ProgressSpeedLabelText}: --";
+            }
+        }
+
+        private string FormatProgressTime(double currentSeconds, double totalSeconds, double? etaSeconds)
+        {
+            if (totalSeconds <= 0)
+            {
+                return Resources.Strings.ProgressTimeIdleText;
+            }
+
+            TimeSpan current = TimeSpan.FromSeconds(Math.Max(0.0, currentSeconds));
+            TimeSpan total = TimeSpan.FromSeconds(Math.Max(0.0, totalSeconds));
+            string text = $"{FormatTimeSpan(current)} / {FormatTimeSpan(total)}";
+
+            if (etaSeconds.HasValue)
+            {
+                TimeSpan eta = TimeSpan.FromSeconds(Math.Max(0.0, etaSeconds.Value));
+                text += $" • {Resources.Strings.ProgressEtaLabelText} {FormatTimeSpan(eta)}";
+            }
+
+            return text;
+        }
+
+        private string FormatTimeSpan(TimeSpan span)
+        {
+            if (span.TotalHours >= 1)
+            {
+                return span.ToString("hh\\:mm\\:ss", CultureInfo.InvariantCulture);
+            }
+
+            return span.ToString("mm\\:ss", CultureInfo.InvariantCulture);
         }
 
         private bool TryGetOutputFormat(out string outputFormat)
@@ -1179,7 +1365,7 @@ namespace DiscordVideoCompressor
             return segments;
         }
 
-        private bool RunTrueDatamoshPipeline(string ffmpegPath, string inputFile, string outputFileTemp, long videoBitrate, int audioBitrate, int audioSampleRate, string audioBitDepth, string videoResolution, int videoFps, double duration, int seed, CancellationToken token, out StringBuilder outputLog, out bool outputHasAudio)
+        private bool RunTrueDatamoshPipeline(string ffmpegPath, string inputFile, string outputFileTemp, long videoBitrate, int audioBitrate, int audioSampleRate, string audioBitDepth, string videoResolution, int videoFps, double duration, int seed, double stageStart, double stageSpan, CancellationToken token, out StringBuilder outputLog, out bool outputHasAudio)
         {
             outputLog = new StringBuilder();
             outputHasAudio = true;
@@ -1200,6 +1386,7 @@ namespace DiscordVideoCompressor
                 string x264Params = $"keyint={gop}:min-keyint=1:scenecut=40:open-gop=0";
 
                 string videoArgs = $"-i \"{inputFile}\" -c:v libx264 -b:v {videoBitrate}{videoFilterArg}{fpsArg} -preset veryfast -pix_fmt yuv420p -bf 0 -x264-params \"{x264Params}\" -an -f h264 -y \"{rawVideoPath}\"";
+                SetProgressStage(Resources.Strings.ProgressStageDatamoshEncode, stageStart, stageSpan * 0.45, true, duration);
                 if (!RunFfmpegProcess(ffmpegPath, videoArgs, token, true, duration, out StringBuilder videoOutput))
                 {
                     outputLog.Append(videoOutput);
@@ -1209,6 +1396,7 @@ namespace DiscordVideoCompressor
                 token.ThrowIfCancellationRequested();
 
                 var windows = BuildDatamoshWindows(duration, seed);
+                SetProgressStage(Resources.Strings.ProgressStageDatamoshTransform, stageStart + stageSpan * 0.45, stageSpan * 0.1, false, duration);
                 if (!ApplyTrueDatamosh(rawVideoPath, moshVideoPath, windows, videoFps, seed, true, token, out string moshError))
                 {
                     outputLog.Append(moshError);
@@ -1222,7 +1410,8 @@ namespace DiscordVideoCompressor
                 string audioFilterArg = string.IsNullOrWhiteSpace(audioFilter) ? "" : $" -af \"{audioFilter}\"";
                 string rateControlArgs = $" -maxrate {videoBitrate} -bufsize {videoBitrate * 2}";
                 string remuxArgs = $"{inputFpsArg} -fflags +genpts -i \"{moshVideoPath}\" -i \"{inputFile}\" -map 0:v:0 -map 1:a:0? -c:v libx264 -b:v {videoBitrate}{rateControlArgs} -preset veryfast -pix_fmt yuv420p -bf 0 -c:a aac -b:a {audioBitrate}{audioFilterArg} -ar {audioSampleRate} -shortest -movflags +faststart -y \"{outputFileTemp}\"";
-                if (!RunFfmpegProcess(ffmpegPath, remuxArgs, token, false, duration, out StringBuilder remuxOutput))
+                SetProgressStage(Resources.Strings.ProgressStageDatamoshRemux, stageStart + stageSpan * 0.55, stageSpan * 0.45, true, duration);
+                if (!RunFfmpegProcess(ffmpegPath, remuxArgs, token, true, duration, out StringBuilder remuxOutput))
                 {
                     outputLog.Append(remuxOutput);
                     return false;
@@ -1759,6 +1948,7 @@ namespace DiscordVideoCompressor
                 ffmpegProcess.Start();
 
                 Regex timeRegex = captureProgress ? new Regex(@"time=(\d+):(\d+):(\d+\.?\d*)") : null;
+                Regex speedRegex = captureProgress ? new Regex(@"speed=([0-9]+(?:[\.,][0-9]+)?)x") : null;
                 string stdErrLine;
 
                 while ((stdErrLine = ffmpegProcess.StandardError.ReadLine()) != null)
@@ -1768,6 +1958,16 @@ namespace DiscordVideoCompressor
 
                     if (captureProgress)
                     {
+                        double? speedValue = null;
+                        if (speedRegex != null)
+                        {
+                            Match speedMatch = speedRegex.Match(stdErrLine);
+                            if (speedMatch.Success && double.TryParse(speedMatch.Groups[1].Value.Replace(",", "."), NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedSpeed))
+                            {
+                                speedValue = parsedSpeed;
+                            }
+                        }
+
                         Match timeMatch = timeRegex.Match(stdErrLine);
                         if (timeMatch.Success)
                         {
@@ -1779,12 +1979,7 @@ namespace DiscordVideoCompressor
                             }
 
                             double currentDuration = hoursCurrent * 3600 + minutesCurrent * 60 + secondsCurrent;
-                            double progress = Math.Min(100, currentDuration / duration * 100);
-
-                            Invoke((Action)(() =>
-                            {
-                                progressBar1.Value = (int)progress;
-                            }));
+                            UpdateProgress(currentDuration, speedValue);
                         }
                     }
                 }

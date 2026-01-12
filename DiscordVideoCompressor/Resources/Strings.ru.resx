@@ -144,6 +144,45 @@
   <data name="BrainrotGlitchEffectText" xml:space="preserve">
     <value>Glitch</value>
   </data>
+  <data name="ProgressStageLabelText" xml:space="preserve">
+    <value>Этап:</value>
+  </data>
+  <data name="ProgressStageIdleText" xml:space="preserve">
+    <value>Ожидание</value>
+  </data>
+  <data name="ProgressStagePrepare" xml:space="preserve">
+    <value>Подготовка</value>
+  </data>
+  <data name="ProgressStageGlitch" xml:space="preserve">
+    <value>Glitch проход</value>
+  </data>
+  <data name="ProgressStageSpeed" xml:space="preserve">
+    <value>Скоростной проход</value>
+  </data>
+  <data name="ProgressStagePass1" xml:space="preserve">
+    <value>Проход 1/2</value>
+  </data>
+  <data name="ProgressStagePass2" xml:space="preserve">
+    <value>Проход 2/2</value>
+  </data>
+  <data name="ProgressStageDatamoshEncode" xml:space="preserve">
+    <value>Datamosh кодирование</value>
+  </data>
+  <data name="ProgressStageDatamoshTransform" xml:space="preserve">
+    <value>Datamosh трансформация</value>
+  </data>
+  <data name="ProgressStageDatamoshRemux" xml:space="preserve">
+    <value>Datamosh ремультиплекс</value>
+  </data>
+  <data name="ProgressEtaLabelText" xml:space="preserve">
+    <value>Осталось</value>
+  </data>
+  <data name="ProgressSpeedLabelText" xml:space="preserve">
+    <value>Скорость</value>
+  </data>
+  <data name="ProgressTimeIdleText" xml:space="preserve">
+    <value>--:-- / --:--</value>
+  </data>
   <data name="GlitchJumpLengthLabelText" xml:space="preserve">
     <value>Длительность прыжка (с)</value>
   </data>
