@@ -538,6 +538,7 @@ namespace DiscordVideoCompressor
                     );
                     string datamoshIntermediate = null;
                     string glitchIntermediate = null;
+                    var tempFiles = new System.Collections.Generic.List<string>();
 
                     try
                     {
@@ -557,11 +558,12 @@ namespace DiscordVideoCompressor
 
                             var segments = glitchSegments ?? BuildDatamoshSegments(duration, datamoshSeed, glitchJumpSeconds, glitchChance);
                             string glitchFilter = BuildDatamoshFilterComplex(videoResolution, audioBitDepth, audioSampleRate, videoFps, segments, out string glitchVLabel, out string glitchALabel);
+                            string glitchScriptPath = WriteFilterScript(glitchFilter, tempFiles);
                             string glitchRateArgs = outputFormat == "mp4"
                                 ? $" -maxrate {currentVideoBitrate} -bufsize {currentVideoBitrate * 2}"
                                 : "";
 
-                            string glitchArgs = $"-i \"{inputFile}\" -filter_complex \"{glitchFilter}\" -map \"{glitchVLabel}\" -map \"{glitchALabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{glitchRateArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{glitchIntermediate}\"";
+                            string glitchArgs = $"-i \"{inputFile}\" -filter_complex_script \"{glitchScriptPath}\" -map \"{glitchVLabel}\" -map \"{glitchALabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{glitchRateArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{glitchIntermediate}\"";
                             if (!RunFfmpegProcess(ffmpegPath, glitchArgs, token, true, duration, out StringBuilder glitchOutput))
                             {
                                 Invoke((Action)(() =>
@@ -572,21 +574,23 @@ namespace DiscordVideoCompressor
                             }
 
                             string speedFilter = BuildSpeedFilterComplex(duration, videoResolution, audioBitDepth, audioSampleRate, audioSampleRate, videoFps, null, true, out string vOutLabel, out string aOutLabel);
+                            string speedScriptPath = WriteFilterScript(speedFilter, tempFiles);
                             string speedRateArgs = outputFormat == "mp4"
                                 ? $" -maxrate {currentVideoBitrate} -bufsize {currentVideoBitrate * 2}"
                                 : "";
 
-                            pass1Args = $"-i \"{glitchIntermediate}\" -filter_complex \"{speedFilter}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{speedRateArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
+                            pass1Args = $"-i \"{glitchIntermediate}\" -filter_complex_script \"{speedScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{speedRateArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
                         }
                         else if (enableSpeedEffect)
                         {
                             string filterComplex = BuildSpeedFilterComplex(duration, videoResolution, audioBitDepth, audioSampleRate, inputAudioSampleRate, videoFps, null, true, out string vOutLabel, out string aOutLabel);
+                            string filterScriptPath = WriteFilterScript(filterComplex, tempFiles);
                             string rateControlArgs = outputFormat == "mp4"
                                 ? $" -maxrate {currentVideoBitrate} -bufsize {currentVideoBitrate * 2}"
                                 : "";
 
-                            pass1Args = $"-i \"{inputFile}\" -filter_complex \"{filterComplex}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
+                            pass1Args = $"-i \"{inputFile}\" -filter_complex_script \"{filterScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
                         }
                         else if (enableDatamosh && enableGlitchEffect)
@@ -614,11 +618,12 @@ namespace DiscordVideoCompressor
 
                             var segments = glitchSegments ?? BuildDatamoshSegments(duration, datamoshPostSeed, glitchJumpSeconds, glitchChance);
                             string filterComplex = BuildDatamoshFilterComplex(videoResolution, audioBitDepth, audioSampleRate, videoFps, segments, out string vOutLabel, out string aOutLabel);
+                            string filterScriptPath = WriteFilterScript(filterComplex, tempFiles);
                             string rateControlArgs = outputFormat == "mp4"
                                 ? $" -maxrate {currentVideoBitrate} -bufsize {currentVideoBitrate * 2}"
                                 : "";
 
-                            pass1Args = $"-i \"{datamoshIntermediate}\" -filter_complex \"{filterComplex}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
+                            pass1Args = $"-i \"{datamoshIntermediate}\" -filter_complex_script \"{filterScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
                         }
                         else if (enableDatamosh)
@@ -647,11 +652,12 @@ namespace DiscordVideoCompressor
                         {
                             var segments = glitchSegments ?? BuildDatamoshSegments(duration, datamoshPostSeed, glitchJumpSeconds, glitchChance);
                             string filterComplex = BuildDatamoshFilterComplex(videoResolution, audioBitDepth, audioSampleRate, videoFps, segments, out string vOutLabel, out string aOutLabel);
+                            string filterScriptPath = WriteFilterScript(filterComplex, tempFiles);
                             string rateControlArgs = outputFormat == "mp4"
                                 ? $" -maxrate {currentVideoBitrate} -bufsize {currentVideoBitrate * 2}"
                                 : "";
 
-                            pass1Args = $"-i \"{inputFile}\" -filter_complex \"{filterComplex}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
+                            pass1Args = $"-i \"{inputFile}\" -filter_complex_script \"{filterScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {audioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
                         }
                         else
@@ -706,6 +712,13 @@ namespace DiscordVideoCompressor
                         }
                         TryDeleteFile(datamoshIntermediate);
                         TryDeleteFile(glitchIntermediate);
+                        if (tempFiles.Count > 0)
+                        {
+                            foreach (string tempFile in tempFiles)
+                            {
+                                TryDeleteFile(tempFile);
+                            }
+                        }
                     }
 
                 } while (!conversionSuccess);
@@ -1455,6 +1468,22 @@ namespace DiscordVideoCompressor
             {
                 Debug.WriteLine("Error deleting temp file: " + ex.Message);
             }
+        }
+
+        private string WriteFilterScript(string filterComplex, System.Collections.Generic.List<string> tempFiles)
+        {
+            if (string.IsNullOrWhiteSpace(filterComplex))
+            {
+                return null;
+            }
+
+            string tempDir = Path.Combine(Path.GetTempPath(), "DiscordVideoCompressor");
+            Directory.CreateDirectory(tempDir);
+
+            string scriptPath = Path.Combine(tempDir, $"ffmpeg_filter_{Guid.NewGuid():N}.txt");
+            File.WriteAllText(scriptPath, filterComplex, new UTF8Encoding(false));
+            tempFiles?.Add(scriptPath);
+            return scriptPath;
         }
 
         private string BuildDatamoshVideoFilter(int seed)
