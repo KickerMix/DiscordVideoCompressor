@@ -13,7 +13,7 @@ The Discord Video Compressor is a Windows application designed to compress video
 - **Language Support:** The application supports English (EN) and Russian (RU) languages, which can be selected via a dropdown menu.
 - **Dark Mode:** Automatically adjusts the application theme to match the system's dark mode settings.
 - **ffmpeg Integration:** The application uses `ffmpeg` for video compression, with the binary automatically extracted and managed within the application.
-- **Preset and Custom Compression:** Users can choose between a preset size for Discord (24MB) or specify a custom target size for compression.
+- **Preset and Custom Compression:** Users can choose between a preset size for Discord (10MB) or specify a custom target size for compression.
 - **Progress Monitoring:** Displays the progress of the compression process with a progress bar.
 - **Force Stop:** Users can forcibly stop the compression process if necessary.
 
