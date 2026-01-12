@@ -16,24 +16,30 @@ namespace DiscordVideoCompressor
         private string createdFile;
         private CancellationTokenSource cancellationTokenSource;
         private Process ffmpegProcess;
+        private string extractedFfmpegPath;
 
         private string ExtractFfmpeg()
         {
-            string ffmpegPath = Path.Combine(Path.GetTempPath(), "ffmpeg.exe");
-
-            if (!File.Exists(ffmpegPath))
+            if (!string.IsNullOrEmpty(extractedFfmpegPath) && File.Exists(extractedFfmpegPath))
             {
-                try
-                {
-                    File.WriteAllBytes(ffmpegPath, Properties.Resources.ffmpeg);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(Resources.Strings.FfmpegExtractionErrorMessage + "\n" + ex.Message, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Environment.Exit(1); // Exit with error
-                }
+                return extractedFfmpegPath;
             }
 
+            string tempDir = Path.Combine(Path.GetTempPath(), "DiscordVideoCompressor");
+            string ffmpegPath = Path.Combine(tempDir, $"ffmpeg_{Guid.NewGuid():N}.exe");
+
+            try
+            {
+                Directory.CreateDirectory(tempDir);
+                File.WriteAllBytes(ffmpegPath, Properties.Resources.ffmpeg);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(Resources.Strings.FfmpegExtractionErrorMessage + "\n" + ex.Message, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Environment.Exit(1);
+            }
+
+            extractedFfmpegPath = ffmpegPath;
             return ffmpegPath;
         }
 
@@ -54,7 +60,8 @@ namespace DiscordVideoCompressor
             pictureBox1.Image = Properties.Resources.logo; // Logo init
 
             comboBoxLanguage.Items.AddRange(new string[] { "EN", "RU" });
-            comboBoxLanguage.SelectedIndex = 1;
+            comboBoxLanguage.SelectedIndex = 0;
+            comboBoxFormat.SelectedIndex = 0;
 
             SetLanguage("en");
 
@@ -105,8 +112,7 @@ namespace DiscordVideoCompressor
                 if (extension == ".mp4" || extension == ".avi" || extension == ".mkv" || extension == ".webm")
                 {
                     inputFile = file;
-                    string fileName = Path.GetFileName(inputFile);
-                    label1.Text = Resources.Strings.SelectedFileLabelText + ": " + fileName;
+                    UpdateSelectedFileLabel();
                 }
                 else
                 {
@@ -118,16 +124,13 @@ namespace DiscordVideoCompressor
         private void comboBoxLanguage_SelectedIndexChanged(object sender, EventArgs e)
         {
             string selectedLanguage = comboBoxLanguage.SelectedItem.ToString();
-            Debug.WriteLine("EN");
             switch (selectedLanguage)
             {
                 case "EN":
                     SetLanguage("en");
-                    Debug.WriteLine("EN");
                     break;
                 case "RU":
                     SetLanguage("ru");
-                    Debug.WriteLine("RU");
                     break;
             }
         }
@@ -148,7 +151,7 @@ namespace DiscordVideoCompressor
             button1.Text = Resources.Strings.ChooseMediaFileButtonText;
             button2.Text = Resources.Strings.ConvertationButtonText;
             button3.Text = Resources.Strings.ForceStopButtonText;
-            label1.Text = Resources.Strings.SelectedFileLabelText;
+            UpdateSelectedFileLabel();
 
             // Force Update
             foreach (Control control in this.Controls)
@@ -161,47 +164,41 @@ namespace DiscordVideoCompressor
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
-                openFileDialog.Filter = "Video Files (*.mp4;*.avi;*.mkv;*.webm)|*.mp4;*.avi;*.mkv;*.webm)";
+                openFileDialog.Filter = "Video Files (*.mp4;*.avi;*.mkv;*.webm)|*.mp4;*.avi;*.mkv;*.webm";
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     inputFile = openFileDialog.FileName;
-                    string fileName = Path.GetFileName(inputFile);
-                    label1.Text = Resources.Strings.SelectedFileLabelText + ": " + fileName;
+                    UpdateSelectedFileLabel();
                 }
             }
         }
 
         private async void button2_Click(object sender, EventArgs e) // Convertation
         {
-            // Hide button "Convertation"
-            button2.Visible = false;
-            comboBoxFormat.Visible = false;
-            progressBar1.Visible = true;
-
             if (string.IsNullOrEmpty(inputFile))
             {
                 MessageBox.Show(Resources.Strings.SelectMediaFileMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                button2.Visible = true; // Show button if error
-                comboBoxFormat.Visible = true;
-                progressBar1.Visible = false;
+                return;
+            }
+
+            if (!TryGetOutputFormat(out string outputFormat))
+            {
+                MessageBox.Show(Resources.Strings.SelectOutputFormatMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             long targetSizeBytes = 0;
-            long presetSizeMB = 0;
 
-            if (radioButton1.Checked) // Discord 24MB preset
+            if (radioButton1.Checked) // Discord 9MB preset
             {
-                presetSizeMB = 24;
-                targetSizeBytes = presetSizeMB * 1024 * 1024;
+                targetSizeBytes = 9L * 1024 * 1024;
             }
             else if (radioButton3.Checked) // Custom size preset
             {
                 if (long.TryParse(textBox1.Text, out long customSizeMB) && customSizeMB > 0)
                 {
-                    presetSizeMB = customSizeMB;
-                    targetSizeBytes = presetSizeMB * 1024 * 1024;
+                    targetSizeBytes = customSizeMB * 1024 * 1024;
                 }
                 else
                 {
@@ -217,13 +214,16 @@ namespace DiscordVideoCompressor
 
             createdFile = null; // Reset path to created file
 
+            SetConversionUiState(true);
+
+            cancellationTokenSource?.Dispose();
             cancellationTokenSource = new CancellationTokenSource();
             var token = cancellationTokenSource.Token;
 
             try
             {
                 progressBar1.Value = 0;
-                await Task.Run(() => ConvertFile(inputFile, targetSizeBytes, token), token);
+                await Task.Run(() => ConvertFile(inputFile, targetSizeBytes, outputFormat, token), token);
             }
             catch (OperationCanceledException)
             {
@@ -231,10 +231,9 @@ namespace DiscordVideoCompressor
             }
             finally
             {
-                progressBar1.Value = 0; // Reset progression after finish
-                button2.Visible = true; // Show button "Convertation" again
-                comboBoxFormat.Visible = true;
-                progressBar1.Visible = false;
+                SetConversionUiState(false);
+                cancellationTokenSource?.Dispose();
+                cancellationTokenSource = null;
             }
         }
 
@@ -243,43 +242,7 @@ namespace DiscordVideoCompressor
             cancellationTokenSource?.Cancel();
 
             // Force stop ffmpeg, if it's running
-            if (ffmpegProcess != null && !ffmpegProcess.HasExited)
-            {
-                ffmpegProcess.Kill();
-            }
-        }
-
-        private bool IsFfmpegAvailableInPath()
-        {
-            try
-            {
-                // Run ffmpeg -version for exist
-                Process process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "ffmpeg",
-                        Arguments = "-version",
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-                process.Start();
-                string output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-                return process.ExitCode == 0;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private bool IsFfmpegAvailableInAppDirectory()
-        {
-            string ffmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
-            return File.Exists(ffmpegPath);
+            TryKillFfmpeg();
         }
 
         private string GetFfmpegPath()
@@ -291,11 +254,11 @@ namespace DiscordVideoCompressor
         {
             try
             {
-                string ffmpegPath = ExtractFfmpeg();
-                if (File.Exists(ffmpegPath))
-                {
-                    File.Delete(ffmpegPath);
-                }
+                cancellationTokenSource?.Cancel();
+                cancellationTokenSource?.Dispose();
+                cancellationTokenSource = null;
+                TryKillFfmpeg();
+                CleanupFfmpeg();
             }
             catch (Exception ex)
             {
@@ -303,7 +266,7 @@ namespace DiscordVideoCompressor
             }
         }
 
-        private void ConvertFile(string inputFile, long targetSizeBytes, CancellationToken token)
+        private void ConvertFile(string inputFile, long targetSizeBytes, string outputFormat, CancellationToken token)
         {
             try
             {
@@ -316,25 +279,7 @@ namespace DiscordVideoCompressor
                     return;
                 }
 
-                // Use Invoke, to get UI
-                string outputFormat = "";
-                long presetSizeMB = 0;
-                Invoke((Action)(() =>
-                {
-                    outputFormat = comboBoxFormat.SelectedItem.ToString().ToLower();
-                    // Get size to set presetSizeMB
-                    if (radioButton1.Checked)
-                    {
-                        presetSizeMB = 24;
-                    }
-                    else if (radioButton3.Checked)
-                    {
-                        if (long.TryParse(textBox1.Text, out long customSizeMB) && customSizeMB > 0)
-                        {
-                            presetSizeMB = customSizeMB;
-                        }
-                    }
-                }));
+                outputFormat = outputFormat.Trim().ToLowerInvariant();
 
                 string outputFile = Path.Combine(
                     Path.GetDirectoryName(inputFile),
@@ -351,36 +296,27 @@ namespace DiscordVideoCompressor
                     return;
                 }
 
-                do
+                int maxPasses = 5;
+                long targetBitrate = 0;
+                int audioBitrate = 128 * 1024; // 128 kbps for audio
+                long videoBitrate = 0;
+
+                double duration = 0;
+                using (var probeProcess = new Process
                 {
-                    token.ThrowIfCancellationRequested();
-
-                    pass++;
-                    if (pass > 5)
+                    StartInfo = new ProcessStartInfo
                     {
-                        Invoke((Action)(() =>
-                        {
-                            MessageBox.Show(Resources.Strings.SelectSizeOptionMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        }));
-                        return;
+                        FileName = ffmpegPath,
+                        Arguments = $"-i \"{inputFile}\" -hide_banner",
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
                     }
-
-                    // Run ffmpeg
-                    ffmpegProcess = new Process
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = ffmpegPath,
-                            Arguments = $"-i \"{inputFile}\" -hide_banner",
-                            RedirectStandardError = true,
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        }
-                    };
-
-                    ffmpegProcess.Start();
-                    string output = ffmpegProcess.StandardError.ReadToEnd();
-                    ffmpegProcess.WaitForExit();
+                })
+                {
+                    probeProcess.Start();
+                    string output = probeProcess.StandardError.ReadToEnd();
+                    probeProcess.WaitForExit();
 
                     Regex regex = new Regex(@"Duration:\s(\d+):(\d+):(\d+\.?\d*)");
                     Match match = regex.Match(output);
@@ -389,7 +325,7 @@ namespace DiscordVideoCompressor
                     {
                         Invoke((Action)(() =>
                         {
-                            MessageBox.Show(Resources.Strings.FileNotExistError, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show(Resources.Strings.DurationErrorMessage + "\n" + output, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }));
                         return;
                     }
@@ -400,50 +336,80 @@ namespace DiscordVideoCompressor
                     {
                         Invoke((Action)(() =>
                         {
-                            MessageBox.Show(Resources.Strings.VideoDurationErrorMessage + "\n" + output, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }));
-                        return;
-                    }
-
-                    double duration = hours * 3600 + minutes * 60 + seconds;
-
-                    if (duration <= 0)
-                    {
-                        Invoke((Action)(() =>
-                        {
                             MessageBox.Show(Resources.Strings.TimeConversionErrorMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }));
                         return;
                     }
 
-                    long targetBitrate = (long)((targetSizeBytes * 8) / duration);
-                    int audioBitrate = 128 * 1024; // 128 kbps for audio
-                    long videoBitrate = targetBitrate - audioBitrate;
+                    duration = hours * 3600 + minutes * 60 + seconds;
+                }
 
-                    if (videoBitrate <= 0)
+                if (duration <= 0)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        MessageBox.Show(Resources.Strings.VideoDurationErrorMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }));
+                    return;
+                }
+
+                targetBitrate = (long)((targetSizeBytes * 8) / duration);
+                videoBitrate = targetBitrate - audioBitrate;
+
+                if (videoBitrate <= 0)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        MessageBox.Show(Resources.Strings.BitrateErrorMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }));
+                    return;
+                }
+
+                string codecVideo = "";
+                string codecAudio = "";
+
+                if (outputFormat == "webm")
+                {
+                    codecVideo = "libvpx-vp9";
+                    codecAudio = "libopus";
+                }
+                else if (outputFormat == "mp4")
+                {
+                    codecVideo = "libx264";
+                    codecAudio = "aac";
+                }
+                else
+                {
+                    Invoke((Action)(() =>
+                    {
+                        MessageBox.Show(Resources.Strings.InvalidFileFormatMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }));
+                    return;
+                }
+
+                long currentVideoBitrate = videoBitrate;
+
+                do
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    pass++;
+                    if (pass > maxPasses)
                     {
                         Invoke((Action)(() =>
                         {
-                            MessageBox.Show(Resources.Strings.VideoDurationErrorMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show(Resources.Strings.FileConversionErrorMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         }));
                         return;
                     }
 
-                    string codecVideo = "";
-                    string codecAudio = "";
-                    string fileExtension = "";
-
-                    if (outputFormat == "webm")
+                    if (currentVideoBitrate <= 0)
                     {
-                        codecVideo = "libvpx-vp9";
-                        codecAudio = "libopus";
-                        fileExtension = "webm";
-                    }
-                    else if (outputFormat == "mp4")
-                    {
-                        codecVideo = "libx264";
-                        codecAudio = "aac";
-                        fileExtension = "mp4";
+                        Invoke((Action)(() =>
+                        {
+                            MessageBox.Show(Resources.Strings.BitrateErrorMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }));
+                        return;
                     }
 
                     ffmpegProcess = new Process
@@ -451,24 +417,26 @@ namespace DiscordVideoCompressor
                         StartInfo = new ProcessStartInfo
                         {
                             FileName = ffmpegPath,
-                            Arguments = $"-i \"{inputFile}\" -b:v {videoBitrate} -b:a {audioBitrate} -c:v {codecVideo} -c:a {codecAudio} -preset veryfast -threads 6 -y -fs {presetSizeMB}M \"{outputFile}\"",
+                            Arguments = $"-i \"{inputFile}\" -b:v {currentVideoBitrate} -b:a {audioBitrate} -c:v {codecVideo} -c:a {codecAudio} -preset veryfast -threads 6 -y \"{outputFile}\"",
                             RedirectStandardError = true,
-                            RedirectStandardOutput = true,
+                            RedirectStandardOutput = false,
                             UseShellExecute = false,
                             CreateNoWindow = true
                         }
                     };
 
-                    Debug.WriteLine($"Execution ffmpeg: {ffmpegPath} -i \"{inputFile}\" -b:v {videoBitrate} -b:a {audioBitrate} -c:v {codecVideo} -c:a {codecAudio} -preset veryfast -threads 6 -y -fs {presetSizeMB}M \"{outputFile}\"");
+                    Debug.WriteLine($"Execution ffmpeg: {ffmpegPath} -i \"{inputFile}\" -b:v {currentVideoBitrate} -b:a {audioBitrate} -c:v {codecVideo} -c:a {codecAudio} -preset veryfast -threads 6 -y \"{outputFile}\"");
 
                     ffmpegProcess.Start();
 
                     string stdErrLine;
                     Regex timeRegex = new Regex(@"time=(\d+):(\d+):(\d+\.?\d*)");
+                    var stdErrOutput = new System.Text.StringBuilder();
 
                     while ((stdErrLine = ffmpegProcess.StandardError.ReadLine()) != null)
                     {
                         token.ThrowIfCancellationRequested();
+                        stdErrOutput.AppendLine(stdErrLine);
 
                         Match timeMatch = timeRegex.Match(stdErrLine);
                         if (timeMatch.Success)
@@ -492,12 +460,15 @@ namespace DiscordVideoCompressor
                     }
 
                     ffmpegProcess.WaitForExit();
+                    int exitCode = ffmpegProcess.ExitCode;
+                    ffmpegProcess.Dispose();
+                    ffmpegProcess = null;
 
-                    if (ffmpegProcess.ExitCode != 0)
+                    if (exitCode != 0)
                     {
                         Invoke((Action)(() =>
                         {
-                            MessageBox.Show($"{Resources.Strings.ConversionErrorMessage}: {ffmpegProcess.StandardError.ReadToEnd()}", Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show(Resources.Strings.ConversionErrorMessage + stdErrOutput, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }));
                         return;
                     }
@@ -510,7 +481,8 @@ namespace DiscordVideoCompressor
                     }
                     else
                     {
-                        targetBitrate = (long)(targetBitrate / 1.1); // lowering bitrate for next try
+                        double sizeRatio = (double)targetSizeBytes / Math.Max(1L, fileInfo.Length);
+                        currentVideoBitrate = (long)(currentVideoBitrate * sizeRatio * 0.95);
                     }
 
                 } while (!conversionSuccess);
@@ -519,28 +491,15 @@ namespace DiscordVideoCompressor
                 {
                     Invoke((Action)(() =>
                     {
-                        MessageBox.Show($"{Resources.Strings.ConversionSuccessMessage}: {createdFile}", Resources.Strings.SuccessTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show(Resources.Strings.ConversionSuccessMessage + createdFile, Resources.Strings.SuccessTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }
             }
             catch (OperationCanceledException)
             {
-                Invoke((Action)(() =>
-                {
-                    MessageBox.Show(Resources.Strings.ConversionCanceledMessage, Resources.Strings.MessageTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }));
+                TryKillFfmpeg();
 
-                if (ffmpegProcess != null && !ffmpegProcess.HasExited)
-                {
-                    try
-                    {
-                        ffmpegProcess.Kill();
-                    }
-                    catch (Exception killEx)
-                    {
-                        Console.WriteLine($"Error kill process: {killEx.Message}");
-                    }
-                }
+                throw;
             }
             catch (Exception ex)
             {
@@ -549,7 +508,7 @@ namespace DiscordVideoCompressor
 
                 Invoke((Action)(() =>
                 {
-                    MessageBox.Show(Resources.Strings.BitrateErrorMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(Resources.Strings.ConversionErrorMessage + ex.Message, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }));
 
                 if (ffmpegProcess != null && !ffmpegProcess.HasExited)
@@ -566,6 +525,12 @@ namespace DiscordVideoCompressor
             }
             finally
             {
+                if (ffmpegProcess != null)
+                {
+                    ffmpegProcess.Dispose();
+                    ffmpegProcess = null;
+                }
+
                 Invoke((Action)(() =>
                 {
                     progressBar1.Value = 0;
@@ -575,7 +540,86 @@ namespace DiscordVideoCompressor
 
         private void Main_Load(object sender, EventArgs e)
         {
-            comboBoxLanguage.SelectedIndex = 0;
+            if (comboBoxLanguage.SelectedIndex < 0)
+            {
+                comboBoxLanguage.SelectedIndex = 0;
+            }
+
+            if (comboBoxFormat.SelectedIndex < 0)
+            {
+                comboBoxFormat.SelectedIndex = 0;
+            }
+
+            UpdateSelectedFileLabel();
+        }
+
+        private void SetConversionUiState(bool isRunning)
+        {
+            button2.Visible = !isRunning;
+            comboBoxFormat.Visible = !isRunning;
+            progressBar1.Visible = isRunning;
+
+            if (!isRunning)
+            {
+                progressBar1.Value = 0;
+            }
+        }
+
+        private void UpdateSelectedFileLabel()
+        {
+            if (string.IsNullOrEmpty(inputFile))
+            {
+                label1.Text = Resources.Strings.SelectedFileLabelText + Resources.Strings.NoFileSelectedText;
+                return;
+            }
+
+            label1.Text = Resources.Strings.SelectedFileLabelText + Path.GetFileName(inputFile);
+        }
+
+        private bool TryGetOutputFormat(out string outputFormat)
+        {
+            outputFormat = comboBoxFormat.SelectedItem?.ToString();
+            if (string.IsNullOrWhiteSpace(outputFormat))
+            {
+                outputFormat = comboBoxFormat.Text;
+            }
+
+            if (string.IsNullOrWhiteSpace(outputFormat))
+            {
+                return false;
+            }
+
+            outputFormat = outputFormat.Trim().ToUpperInvariant();
+            return outputFormat == "MP4" || outputFormat == "WEBM";
+        }
+
+        private void CleanupFfmpeg()
+        {
+            if (!string.IsNullOrEmpty(extractedFfmpegPath) && File.Exists(extractedFfmpegPath))
+            {
+                File.Delete(extractedFfmpegPath);
+                extractedFfmpegPath = null;
+            }
+        }
+
+        private void TryKillFfmpeg()
+        {
+            if (ffmpegProcess == null)
+            {
+                return;
+            }
+
+            try
+            {
+                if (!ffmpegProcess.HasExited)
+                {
+                    ffmpegProcess.Kill();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Error killing ffmpeg: " + ex.Message);
+            }
         }
     }
 }

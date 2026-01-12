@@ -110,7 +110,7 @@
             this.radioButton1.TabIndex = 4;
             this.radioButton1.TabStop = true;
             this.radioButton1.Tag = "discordRadioButton";
-            this.radioButton1.Text = "Discord 25 MB";
+            this.radioButton1.Text = "Discord 9 MB";
             this.radioButton1.UseVisualStyleBackColor = true;
             // 
             // radioButton3
@@ -149,6 +149,7 @@
             // comboBoxFormat
             // 
             this.comboBoxFormat.BackColor = System.Drawing.Color.Black;
+            this.comboBoxFormat.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxFormat.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
             this.comboBoxFormat.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.comboBoxFormat.ForeColor = System.Drawing.Color.LightSkyBlue;
@@ -166,6 +167,7 @@
             // comboBoxLanguage
             // 
             this.comboBoxLanguage.BackColor = System.Drawing.Color.Black;
+            this.comboBoxLanguage.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxLanguage.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.comboBoxLanguage.ForeColor = System.Drawing.Color.LightSkyBlue;
             this.comboBoxLanguage.FormattingEnabled = true;

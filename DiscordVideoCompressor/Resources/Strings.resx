@@ -126,8 +126,47 @@
   <data name="ForceStopButtonText" xml:space="preserve">
     <value>Force stop</value>
   </data>
+  <data name="DiscordPresetText" xml:space="preserve">
+    <value>Discord 9 MB</value>
+  </data>
+  <data name="CustomMaxSizeText" xml:space="preserve">
+    <value>Custom Max Size (MB)</value>
+  </data>
+  <data name="BrainrotEditionText" xml:space="preserve">
+    <value>Brainrot Edition</value>
+  </data>
+  <data name="BrainrotSpeedEffectText" xml:space="preserve">
+    <value>Smooth speed effect</value>
+  </data>
+  <data name="BrainrotDatamoshEffectText" xml:space="preserve">
+    <value>Datamosh</value>
+  </data>
+  <data name="BrainrotGlitchEffectText" xml:space="preserve">
+    <value>Glitch</value>
+  </data>
+  <data name="GlitchJumpLengthLabelText" xml:space="preserve">
+    <value>Jump length (s)</value>
+  </data>
+  <data name="GlitchChanceLabelText" xml:space="preserve">
+    <value>Chance (%)</value>
+  </data>
+  <data name="ResolutionLabelText" xml:space="preserve">
+    <value>Resolution</value>
+  </data>
+  <data name="SampleRateLabelText" xml:space="preserve">
+    <value>Sample Rate</value>
+  </data>
+  <data name="BitDepthLabelText" xml:space="preserve">
+    <value>Bit Depth</value>
+  </data>
+  <data name="FpsLabelText" xml:space="preserve">
+    <value>FPS</value>
+  </data>
   <data name="SelectedFileLabelText" xml:space="preserve">
     <value>Selected file: </value>
+  </data>
+  <data name="NoFileSelectedText" xml:space="preserve">
+    <value>No file</value>
   </data>
   <data name="SizeOptionLabel" xml:space="preserve">
     <value>Size option</value>
@@ -137,6 +176,21 @@
   </data>
   <data name="SelectMediaFileMessage" xml:space="preserve">
     <value>Please choose a media file.</value>
+  </data>
+  <data name="SelectOutputFormatMessage" xml:space="preserve">
+    <value>Please select an output format.</value>
+  </data>
+  <data name="DatamoshMp4OnlyMessage" xml:space="preserve">
+    <value>Datamosh works only with MP4 output. Choose MP4 or use Glitch.</value>
+  </data>
+  <data name="DatamoshSpeedConflictMessage" xml:space="preserve">
+    <value>Datamosh cannot be combined with the speed effect.</value>
+  </data>
+  <data name="DatamoshMutualExclusiveMessage" xml:space="preserve">
+    <value>Please select only one of Datamosh or Glitch.</value>
+  </data>
+  <data name="DatamoshAudioMissingMessage" xml:space="preserve">
+    <value>Datamosh output has no audio.</value>
   </data>
   <data name="FileNotExistError" xml:space="preserve">
     <value>The file does not exist.</value>

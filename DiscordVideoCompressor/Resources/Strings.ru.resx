@@ -126,8 +126,47 @@
   <data name="ForceStopButtonText" xml:space="preserve">
     <value>Принудительная остановка</value>
   </data>
+  <data name="DiscordPresetText" xml:space="preserve">
+    <value>Discord 9 MB</value>
+  </data>
+  <data name="CustomMaxSizeText" xml:space="preserve">
+    <value>Пользовательский размер (MB)</value>
+  </data>
+  <data name="BrainrotEditionText" xml:space="preserve">
+    <value>Brainrot Edition</value>
+  </data>
+  <data name="BrainrotSpeedEffectText" xml:space="preserve">
+    <value>Плавный эффект скорости</value>
+  </data>
+  <data name="BrainrotDatamoshEffectText" xml:space="preserve">
+    <value>Datamosh</value>
+  </data>
+  <data name="BrainrotGlitchEffectText" xml:space="preserve">
+    <value>Glitch</value>
+  </data>
+  <data name="GlitchJumpLengthLabelText" xml:space="preserve">
+    <value>Длительность прыжка (с)</value>
+  </data>
+  <data name="GlitchChanceLabelText" xml:space="preserve">
+    <value>Шанс (%)</value>
+  </data>
+  <data name="ResolutionLabelText" xml:space="preserve">
+    <value>Разрешение</value>
+  </data>
+  <data name="SampleRateLabelText" xml:space="preserve">
+    <value>Частота дискретизации</value>
+  </data>
+  <data name="BitDepthLabelText" xml:space="preserve">
+    <value>Разрядность</value>
+  </data>
+  <data name="FpsLabelText" xml:space="preserve">
+    <value>FPS</value>
+  </data>
   <data name="SelectedFileLabelText" xml:space="preserve">
     <value>Выбранный файл: </value>
+  </data>
+  <data name="NoFileSelectedText" xml:space="preserve">
+    <value>Нет файла</value>
   </data>
   <data name="SizeOptionLabel" xml:space="preserve">
     <value>Опция размера</value>
@@ -137,6 +176,21 @@
   </data>
   <data name="SelectMediaFileMessage" xml:space="preserve">
     <value>Выберите медиа файл.</value>
+  </data>
+  <data name="SelectOutputFormatMessage" xml:space="preserve">
+    <value>Выберите формат вывода.</value>
+  </data>
+  <data name="DatamoshMp4OnlyMessage" xml:space="preserve">
+    <value>Datamosh работает только с MP4. Выберите MP4 или используйте Glitch.</value>
+  </data>
+  <data name="DatamoshSpeedConflictMessage" xml:space="preserve">
+    <value>Datamosh нельзя сочетать с эффектом скорости.</value>
+  </data>
+  <data name="DatamoshMutualExclusiveMessage" xml:space="preserve">
+    <value>Выберите только один эффект: Datamosh или Glitch.</value>
+  </data>
+  <data name="DatamoshAudioMissingMessage" xml:space="preserve">
+    <value>В результате datamosh нет звука.</value>
   </data>
   <data name="FileNotExistError" xml:space="preserve">
     <value>Файл не существует.</value>

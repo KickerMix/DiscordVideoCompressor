@@ -187,11 +187,128 @@ namespace DiscordVideoCompressor.Resources {
         }
         
         /// <summary>
+        ///   Ищет локализованную строку, похожую на Discord 9 MB.
+        /// </summary>
+        internal static string DiscordPresetText {
+            get {
+                return ResourceManager.GetString("DiscordPresetText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Custom Max Size (MB).
+        /// </summary>
+        internal static string CustomMaxSizeText {
+            get {
+                return ResourceManager.GetString("CustomMaxSizeText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Brainrot Edition.
+        /// </summary>
+        internal static string BrainrotEditionText {
+            get {
+                return ResourceManager.GetString("BrainrotEditionText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Smooth speed effect.
+        /// </summary>
+        internal static string BrainrotSpeedEffectText {
+            get {
+                return ResourceManager.GetString("BrainrotSpeedEffectText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Datamosh effect.
+        /// </summary>
+        internal static string BrainrotDatamoshEffectText {
+            get {
+                return ResourceManager.GetString("BrainrotDatamoshEffectText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Glitch.
+        /// </summary>
+        internal static string BrainrotGlitchEffectText {
+            get {
+                return ResourceManager.GetString("BrainrotGlitchEffectText", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Jump length (s).
+        /// </summary>
+        internal static string GlitchJumpLengthLabelText {
+            get {
+                return ResourceManager.GetString("GlitchJumpLengthLabelText", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Chance (%).
+        /// </summary>
+        internal static string GlitchChanceLabelText {
+            get {
+                return ResourceManager.GetString("GlitchChanceLabelText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Resolution.
+        /// </summary>
+        internal static string ResolutionLabelText {
+            get {
+                return ResourceManager.GetString("ResolutionLabelText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Sample Rate.
+        /// </summary>
+        internal static string SampleRateLabelText {
+            get {
+                return ResourceManager.GetString("SampleRateLabelText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Bit Depth.
+        /// </summary>
+        internal static string BitDepthLabelText {
+            get {
+                return ResourceManager.GetString("BitDepthLabelText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на FPS.
+        /// </summary>
+        internal static string FpsLabelText {
+            get {
+                return ResourceManager.GetString("FpsLabelText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Ищет локализованную строку, похожую на Invalid file extension..
         /// </summary>
         internal static string InvalidFileFormatMessage {
             get {
                 return ResourceManager.GetString("InvalidFileFormatMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на No file.
+        /// </summary>
+        internal static string NoFileSelectedText {
+            get {
+                return ResourceManager.GetString("NoFileSelectedText", resourceCulture);
             }
         }
         
@@ -219,6 +336,51 @@ namespace DiscordVideoCompressor.Resources {
         internal static string SelectMediaFileMessage {
             get {
                 return ResourceManager.GetString("SelectMediaFileMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Please select an output format..
+        /// </summary>
+        internal static string SelectOutputFormatMessage {
+            get {
+                return ResourceManager.GetString("SelectOutputFormatMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Datamosh works only with MP4 output. Choose MP4 or use Glitch..
+        /// </summary>
+        internal static string DatamoshMp4OnlyMessage {
+            get {
+                return ResourceManager.GetString("DatamoshMp4OnlyMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Datamosh cannot be combined with the speed effect..
+        /// </summary>
+        internal static string DatamoshSpeedConflictMessage {
+            get {
+                return ResourceManager.GetString("DatamoshSpeedConflictMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Please select only one of Datamosh or Glitch..
+        /// </summary>
+        internal static string DatamoshMutualExclusiveMessage {
+            get {
+                return ResourceManager.GetString("DatamoshMutualExclusiveMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Datamosh output has no audio. Log saved at: .
+        /// </summary>
+        internal static string DatamoshAudioMissingMessage {
+            get {
+                return ResourceManager.GetString("DatamoshAudioMissingMessage", resourceCulture);
             }
         }
         
