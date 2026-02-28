@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Installer/release artifacts
+installer/output/
+installer/appcast/
+installer/keys/*.priv

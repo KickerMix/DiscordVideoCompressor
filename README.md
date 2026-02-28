@@ -12,8 +12,8 @@ The Discord Video Compressor is a Windows application designed to compress video
 - **Drag and Drop Support:** Simply drag and drop your video files into the application to start the compression process.
 - **Language Support:** The application supports English (EN) and Russian (RU) languages, which can be selected via a dropdown menu.
 - **Dark Mode:** Automatically adjusts the application theme to match the system's dark mode settings.
-- **ffmpeg Integration:** The application uses `ffmpeg` for video compression, with the binary automatically extracted and managed within the application.
-- **Preset and Custom Compression:** Users can choose between a preset size for Discord (10MB) or specify a custom target size for compression.
+- **ffmpeg Integration:** The application ships `ffmpeg.exe` as an embedded resource, so the user still gets a single app package without a separate dependency setup.
+- **Preset and Custom Compression:** Users can use the built-in Discord preset (9 MB) or specify a custom target size for compression.
 - **Progress Monitoring:** Displays the progress of the compression process with a progress bar.
 - **Force Stop:** Users can forcibly stop the compression process if necessary.
 
@@ -27,11 +27,44 @@ The Discord Video Compressor is a Windows application designed to compress video
    ```
 
 2. **Build the project:**
-   - Open the solution file (`DiscordVideoCompressor.sln`) in Visual Studio.
+   - Open the solution file (`DiscordVideoCompressor.sln`) in Visual Studio 2022 or build it with the .NET 8 SDK.
    - Build the project.
 
 3. **Run the application:**
    - After building, run the `DiscordVideoCompressor.exe` from the output directory.
+
+## Windows Installer
+
+- The repository now includes an Inno Setup script at [installer/DiscordVideoCompressor.iss](./installer/DiscordVideoCompressor.iss).
+- Build a release installer from [installer/Build-Installer.ps1](./installer/Build-Installer.ps1). The script publishes the single-file Win64 build first and then compiles `setup.exe`.
+- The installer places the app in `Program Files`, registers an uninstaller, and creates a Start menu shortcut so the user can launch it through `Start`.
+- `ffmpeg.exe` remains embedded inside the application binary. The installer does not add a separate ffmpeg dependency.
+
+## Automatic Updates
+
+- NetSparkle is wired to GitHub Releases through [DiscordVideoCompressor/AppUpdaterSettings.cs](./DiscordVideoCompressor/AppUpdaterSettings.cs).
+- The app checks this URL for updates:
+  - `https://github.com/KickerMix/DiscordVideoCompressor/releases/latest/download/appcast.xml`
+- The repository includes the public Ed25519 key at [installer/keys/NetSparkle_Ed25519.pub](./installer/keys/NetSparkle_Ed25519.pub). The private key stays local and is ignored by git.
+- Generate appcast files for each installer release with [installer/New-AppCast.ps1](./installer/New-AppCast.ps1).
+- Upload the installer plus `appcast.xml` and `appcast.xml.signature` to a GitHub release with [installer/Publish-GitHubRelease.ps1](./installer/Publish-GitHubRelease.ps1). The script expects `GITHUB_TOKEN`.
+- Recommended release flow:
+  1. Build the installer with `installer/Build-Installer.ps1`.
+  2. Generate the appcast for a tag, for example `1.1.1`, with `installer/New-AppCast.ps1`.
+  3. Set `GITHUB_TOKEN` and upload the installer and appcast assets with `installer/Publish-GitHubRelease.ps1 -Tag 1.1.1`.
+  4. After the release is published, installed copies will see the new version through GitHub Releases.
+
+## GitHub Actions Release
+
+- The repository can also publish releases automatically from Git tags through GitHub Actions.
+- Recommended tag format is the current repository format without a prefix, for example `1.1.2`.
+- The workflow should:
+  - verify that the git tag matches the project version;
+  - build and test on Windows;
+  - create the installer;
+  - restore the NetSparkle private key from a GitHub secret;
+  - generate `appcast.xml`;
+  - create/update the GitHub Release and upload all assets.
 
 ## Usage
 
@@ -40,7 +73,7 @@ The Discord Video Compressor is a Windows application designed to compress video
    - Supported formats: `.mp4`, `.avi`, `.mkv`, `.webm`.
 
 2. **Choose the Compression Size:**
-   - Use the default 24MB Discord preset or specify a custom size in MB.
+   - Use the default 9 MB Discord preset or specify a custom size in MB.
 
 3. **Start Compression:**
    - Click the "Convert" button to start the compression process.
@@ -54,7 +87,8 @@ The Discord Video Compressor is a Windows application designed to compress video
 
 ## Dependencies
 
-- **ffmpeg:** The application includes a version of `ffmpeg` that is automatically extracted and managed. No external installation is required.
+- **ffmpeg:** The application deliberately keeps `ffmpeg.exe` as an embedded resource and extracts it automatically at runtime. No external installation is required, and the distributed build still includes everything needed for end users.
+- **NetSparkle:** Automatic updates are prepared through NetSparkle and are expected to distribute the installer package in future releases.
 
 ## Contributing
 

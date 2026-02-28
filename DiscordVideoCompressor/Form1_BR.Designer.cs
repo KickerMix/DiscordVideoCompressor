@@ -28,26 +28,26 @@ namespace DiscordVideoCompressor
         /// </summary>
         private void InitializeComponent()
         {
-            this.button1 = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
-            this.button3 = new System.Windows.Forms.Button();
-            this.label1 = new System.Windows.Forms.Label();
+            this.selectFileButton = new System.Windows.Forms.Button();
+            this.convertButton = new System.Windows.Forms.Button();
+            this.cancelButton = new System.Windows.Forms.Button();
+            this.selectedFileLabel = new System.Windows.Forms.Label();
             this.radioButton1 = new System.Windows.Forms.RadioButton();
             this.radioButton3 = new System.Windows.Forms.RadioButton();
-            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.customSizeTextBox = new System.Windows.Forms.TextBox();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.comboBoxFormat = new System.Windows.Forms.ComboBox();
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.logoPictureBox = new System.Windows.Forms.PictureBox();
             this.comboBoxSampleRate = new System.Windows.Forms.ComboBox();
             this.comboBoxLanguage = new System.Windows.Forms.ComboBox();
-            this.label2 = new System.Windows.Forms.Label();
+            this.brainrotLabel = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.comboBoxResolution = new System.Windows.Forms.ComboBox();
             this.label4 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.comboBoxBitDepth = new System.Windows.Forms.ComboBox();
-            this.comboBoxvideoFPS = new System.Windows.Forms.ComboBox();
+            this.comboBoxVideoFps = new System.Windows.Forms.ComboBox();
             this.label7 = new System.Windows.Forms.Label();
             this.checkBoxSpeedEffect = new System.Windows.Forms.CheckBox();
             this.checkBoxDatamosh = new System.Windows.Forms.CheckBox();
@@ -60,66 +60,66 @@ namespace DiscordVideoCompressor
             this.statusLabelStage = new System.Windows.Forms.ToolStripStatusLabel();
             this.statusLabelTime = new System.Windows.Forms.ToolStripStatusLabel();
             this.statusLabelSpeed = new System.Windows.Forms.ToolStripStatusLabel();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.logoPictureBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericGlitchLength)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericGlitchChance)).BeginInit();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
-            // button1
+            // selectFileButton
             // 
-            this.button1.BackColor = System.Drawing.Color.Black;
-            this.button1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.button1.ForeColor = System.Drawing.Color.LightGreen;
-            this.button1.Location = new System.Drawing.Point(10, 10);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(200, 23);
-            this.button1.TabIndex = 0;
-            this.button1.Tag = "selectFileButton";
-            this.button1.Text = "Выбрать медиа файл";
-            this.button1.UseVisualStyleBackColor = false;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.selectFileButton.BackColor = System.Drawing.Color.Black;
+            this.selectFileButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.selectFileButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.selectFileButton.ForeColor = System.Drawing.Color.LightGreen;
+            this.selectFileButton.Location = new System.Drawing.Point(10, 10);
+            this.selectFileButton.Name = "selectFileButton";
+            this.selectFileButton.Size = new System.Drawing.Size(200, 23);
+            this.selectFileButton.TabIndex = 0;
+            this.selectFileButton.Tag = "selectFileButton";
+            this.selectFileButton.Text = "Выбрать медиа файл";
+            this.selectFileButton.UseVisualStyleBackColor = false;
+            this.selectFileButton.Click += new System.EventHandler(this.selectFileButton_Click);
             // 
-            // button2
+            // convertButton
             // 
-            this.button2.BackColor = System.Drawing.Color.Black;
-            this.button2.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.button2.ForeColor = System.Drawing.Color.Coral;
-            this.button2.Location = new System.Drawing.Point(220, 56);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(100, 30);
-            this.button2.TabIndex = 1;
-            this.button2.Tag = "convertButton";
-            this.button2.Text = "Конвертировать";
-            this.button2.UseVisualStyleBackColor = false;
-            this.button2.Click += new System.EventHandler(this.button2_Click);
+            this.convertButton.BackColor = System.Drawing.Color.Black;
+            this.convertButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.convertButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.convertButton.ForeColor = System.Drawing.Color.Coral;
+            this.convertButton.Location = new System.Drawing.Point(220, 56);
+            this.convertButton.Name = "convertButton";
+            this.convertButton.Size = new System.Drawing.Size(100, 30);
+            this.convertButton.TabIndex = 1;
+            this.convertButton.Tag = "convertButton";
+            this.convertButton.Text = "Конвертировать";
+            this.convertButton.UseVisualStyleBackColor = false;
+            this.convertButton.Click += new System.EventHandler(this.convertButton_Click);
             // 
-            // button3
+            // cancelButton
             // 
-            this.button3.BackColor = System.Drawing.Color.Black;
-            this.button3.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.button3.ForeColor = System.Drawing.Color.IndianRed;
-            this.button3.Location = new System.Drawing.Point(363, 10);
-            this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(206, 23);
-            this.button3.TabIndex = 2;
-            this.button3.Tag = "forceStopButton";
-            this.button3.Text = "Принудительно завершить";
-            this.button3.UseVisualStyleBackColor = false;
-            this.button3.Click += new System.EventHandler(this.button3_Click);
+            this.cancelButton.BackColor = System.Drawing.Color.Black;
+            this.cancelButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.cancelButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.cancelButton.ForeColor = System.Drawing.Color.IndianRed;
+            this.cancelButton.Location = new System.Drawing.Point(363, 10);
+            this.cancelButton.Name = "cancelButton";
+            this.cancelButton.Size = new System.Drawing.Size(206, 23);
+            this.cancelButton.TabIndex = 2;
+            this.cancelButton.Tag = "forceStopButton";
+            this.cancelButton.Text = "Принудительно завершить";
+            this.cancelButton.UseVisualStyleBackColor = false;
+            this.cancelButton.Click += new System.EventHandler(this.cancelButton_Click);
             // 
-            // label1
+            // selectedFileLabel
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(10, 39);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(155, 13);
-            this.label1.TabIndex = 3;
-            this.label1.Tag = "fileLabel";
-            this.label1.Text = "Выбранный файл: Нет файла";
+            this.selectedFileLabel.AutoSize = true;
+            this.selectedFileLabel.Location = new System.Drawing.Point(10, 39);
+            this.selectedFileLabel.Name = "selectedFileLabel";
+            this.selectedFileLabel.Size = new System.Drawing.Size(155, 13);
+            this.selectedFileLabel.TabIndex = 3;
+            this.selectedFileLabel.Tag = "fileLabel";
+            this.selectedFileLabel.Text = "Выбранный файл: Нет файла";
             // 
             // radioButton1
             // 
@@ -149,15 +149,15 @@ namespace DiscordVideoCompressor
             this.radioButton3.Text = "Custom Max Size (MB)";
             this.radioButton3.UseVisualStyleBackColor = true;
             // 
-            // textBox1
+            // customSizeTextBox
             // 
-            this.textBox1.BackColor = System.Drawing.Color.Black;
-            this.textBox1.ForeColor = System.Drawing.Color.LightSkyBlue;
-            this.textBox1.Location = new System.Drawing.Point(163, 135);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(100, 20);
-            this.textBox1.TabIndex = 7;
-            this.textBox1.Tag = "customSizeTextBox";
+            this.customSizeTextBox.BackColor = System.Drawing.Color.Black;
+            this.customSizeTextBox.ForeColor = System.Drawing.Color.LightSkyBlue;
+            this.customSizeTextBox.Location = new System.Drawing.Point(163, 135);
+            this.customSizeTextBox.Name = "customSizeTextBox";
+            this.customSizeTextBox.Size = new System.Drawing.Size(100, 20);
+            this.customSizeTextBox.TabIndex = 7;
+            this.customSizeTextBox.Tag = "customSizeTextBox";
             // 
             // progressBar1
             // 
@@ -186,16 +186,16 @@ namespace DiscordVideoCompressor
             this.comboBoxFormat.TabIndex = 11;
             this.comboBoxFormat.Tag = "comboBoxFormat";
             // 
-            // pictureBox1
+            // logoPictureBox
             // 
-            this.pictureBox1.ImageLocation = "";
-            this.pictureBox1.Location = new System.Drawing.Point(516, 178);
-            this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(60, 60);
-            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
-            this.pictureBox1.TabIndex = 12;
-            this.pictureBox1.TabStop = false;
-            this.pictureBox1.Click += new System.EventHandler(this.pictureBox1_Click);
+            this.logoPictureBox.ImageLocation = "";
+            this.logoPictureBox.Location = new System.Drawing.Point(516, 178);
+            this.logoPictureBox.Name = "logoPictureBox";
+            this.logoPictureBox.Size = new System.Drawing.Size(60, 60);
+            this.logoPictureBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.logoPictureBox.TabIndex = 12;
+            this.logoPictureBox.TabStop = false;
+            this.logoPictureBox.Click += new System.EventHandler(this.logoPictureBox_Click);
             // 
             // comboBoxSampleRate
             // 
@@ -233,17 +233,17 @@ namespace DiscordVideoCompressor
             this.comboBoxLanguage.Tag = "comboBoxLanguage";
             this.comboBoxLanguage.SelectedIndexChanged += new System.EventHandler(this.comboBoxLanguage_SelectedIndexChanged);
             // 
-            // label2
+            // brainrotLabel
             // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.label2.ForeColor = System.Drawing.Color.Crimson;
-            this.label2.Location = new System.Drawing.Point(228, 171);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(121, 17);
-            this.label2.TabIndex = 14;
-            this.label2.Text = "Brainrot Edition";
-            this.label2.Click += new System.EventHandler(this.label2_Click);
+            this.brainrotLabel.AutoSize = true;
+            this.brainrotLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.brainrotLabel.ForeColor = System.Drawing.Color.Crimson;
+            this.brainrotLabel.Location = new System.Drawing.Point(228, 171);
+            this.brainrotLabel.Name = "brainrotLabel";
+            this.brainrotLabel.Size = new System.Drawing.Size(121, 17);
+            this.brainrotLabel.TabIndex = 14;
+            this.brainrotLabel.Text = "Brainrot Edition";
+            this.brainrotLabel.Click += new System.EventHandler(this.brainrotLabel_Click);
             // 
             // label3
             // 
@@ -327,25 +327,25 @@ namespace DiscordVideoCompressor
             this.comboBoxBitDepth.TabIndex = 20;
             this.comboBoxBitDepth.Tag = "comboBoxBitDepth";
             // 
-            // comboBoxvideoFPS
+            // comboBoxVideoFps
             // 
-            this.comboBoxvideoFPS.BackColor = System.Drawing.Color.Black;
-            this.comboBoxvideoFPS.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBoxvideoFPS.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.comboBoxvideoFPS.ForeColor = System.Drawing.Color.LightSkyBlue;
-            this.comboBoxvideoFPS.FormattingEnabled = true;
-            this.comboBoxvideoFPS.Items.AddRange(new object[] {
+            this.comboBoxVideoFps.BackColor = System.Drawing.Color.Black;
+            this.comboBoxVideoFps.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBoxVideoFps.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.comboBoxVideoFps.ForeColor = System.Drawing.Color.LightSkyBlue;
+            this.comboBoxVideoFps.FormattingEnabled = true;
+            this.comboBoxVideoFps.Items.AddRange(new object[] {
             "5",
             "10",
             "24",
             "30",
             "60"});
-            this.comboBoxvideoFPS.Location = new System.Drawing.Point(32, 237);
-            this.comboBoxvideoFPS.Name = "comboBoxvideoFPS";
-            this.comboBoxvideoFPS.Size = new System.Drawing.Size(47, 21);
-            this.comboBoxvideoFPS.TabIndex = 22;
-            this.comboBoxvideoFPS.Tag = "comboBoxvideoFPS";
-            this.comboBoxvideoFPS.SelectedIndexChanged += new System.EventHandler(this.comboBoxvideoFPS_SelectedIndexChanged);
+            this.comboBoxVideoFps.Location = new System.Drawing.Point(32, 237);
+            this.comboBoxVideoFps.Name = "comboBoxVideoFps";
+            this.comboBoxVideoFps.Size = new System.Drawing.Size(47, 21);
+            this.comboBoxVideoFps.TabIndex = 22;
+            this.comboBoxVideoFps.Tag = "comboBoxvideoFPS";
+            this.comboBoxVideoFps.SelectedIndexChanged += new System.EventHandler(this.comboBoxVideoFps_SelectedIndexChanged);
             // 
             // label7
             // 
@@ -511,7 +511,7 @@ namespace DiscordVideoCompressor
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(42)))), ((int)(((byte)(42)))), ((int)(((byte)(42)))));
             this.ClientSize = new System.Drawing.Size(584, 310);
             this.Controls.Add(this.label7);
-            this.Controls.Add(this.comboBoxvideoFPS);
+            this.Controls.Add(this.comboBoxVideoFps);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.comboBoxBitDepth);
             this.Controls.Add(this.label5);
@@ -526,25 +526,25 @@ namespace DiscordVideoCompressor
             this.Controls.Add(this.checkBoxGlitchEffect);
             this.Controls.Add(this.checkBoxDatamosh);
             this.Controls.Add(this.checkBoxSpeedEffect);
-            this.Controls.Add(this.label2);
+            this.Controls.Add(this.brainrotLabel);
             this.Controls.Add(this.comboBoxLanguage);
-            this.Controls.Add(this.pictureBox1);
+            this.Controls.Add(this.logoPictureBox);
             this.Controls.Add(this.comboBoxFormat);
             this.Controls.Add(this.progressBar1);
-            this.Controls.Add(this.textBox1);
+            this.Controls.Add(this.customSizeTextBox);
             this.Controls.Add(this.radioButton3);
             this.Controls.Add(this.radioButton1);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.button3);
-            this.Controls.Add(this.button2);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.selectedFileLabel);
+            this.Controls.Add(this.cancelButton);
+            this.Controls.Add(this.convertButton);
+            this.Controls.Add(this.selectFileButton);
             this.Controls.Add(this.statusStrip1);
             this.ForeColor = System.Drawing.SystemColors.ButtonFace;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Name = "Form1";
             this.Text = "Video Converter";
             this.Load += new System.EventHandler(this.Form1_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.logoPictureBox)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericGlitchLength)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericGlitchChance)).EndInit();
             this.statusStrip1.ResumeLayout(false);
@@ -556,26 +556,26 @@ namespace DiscordVideoCompressor
 
         #endregion
 
-        private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.Button button2;
-        private System.Windows.Forms.Button button3;
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button selectFileButton;
+        private System.Windows.Forms.Button convertButton;
+        private System.Windows.Forms.Button cancelButton;
+        private System.Windows.Forms.Label selectedFileLabel;
         private System.Windows.Forms.RadioButton radioButton1;
         private System.Windows.Forms.RadioButton radioButton3;
-        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.TextBox customSizeTextBox;
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.ComboBox comboBoxFormat;
-        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.PictureBox logoPictureBox;
         private System.Windows.Forms.ComboBox comboBoxSampleRate;
         private System.Windows.Forms.ComboBox comboBoxLanguage;
-        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label brainrotLabel;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox comboBoxResolution;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.ComboBox comboBoxBitDepth;
-        private System.Windows.Forms.ComboBox comboBoxvideoFPS;
+        private System.Windows.Forms.ComboBox comboBoxVideoFps;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.CheckBox checkBoxSpeedEffect;
         private System.Windows.Forms.CheckBox checkBoxDatamosh;

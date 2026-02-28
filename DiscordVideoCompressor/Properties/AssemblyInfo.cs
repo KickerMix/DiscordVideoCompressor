@@ -7,10 +7,10 @@ using System.Runtime.Versioning;
 // набора атрибутов. Измените значения этих атрибутов для изменения сведений,
 // связанных со сборкой.
 [assembly: AssemblyTitle("DiscordVideoCompressor")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Windows video compressor for Discord size limits with embedded ffmpeg.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("DiscordVideoCompressor")]
+[assembly: AssemblyCompany("KickerMix")]
+[assembly: AssemblyProduct("Discord Video Compressor")]
 [assembly: AssemblyCopyright("Copyright c  2024")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -34,5 +34,6 @@ using System.Runtime.Versioning;
 // Можно задать все значения или принять номера сборки и редакции по умолчанию 
 // используя "*", как показано ниже:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.2.0")]
+[assembly: AssemblyFileVersion("1.1.2.0")]
+[assembly: InternalsVisibleTo("DiscordVideoCompressor.Tests")]

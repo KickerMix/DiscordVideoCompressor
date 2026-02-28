@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Install NetSparkle appcast generator
+        shell: pwsh
+        run: dotnet tool install --global NetSparkleUpdater.Tools.AppCastGenerator --version 2.8.6
+
+      - name: Validate tag matches project version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content "${{ github.workspace }}\DiscordVideoCompressor\DiscordVideoCompressor.csproj"
+          $projectVersion = $project.Project.PropertyGroup.Version | Select-Object -First 1
+          $tag = "${{ github.ref_name }}"
+          if ($projectVersion -ne $tag) {
+            throw "Git tag '$tag' does not match project version '$projectVersion'."
+          }
+
+      - name: Restore NetSparkle private key
+        shell: pwsh
+        run: |
+          $keysDir = "${{ github.workspace }}\installer\keys"
+          New-Item -ItemType Directory -Force -Path $keysDir | Out-Null
+          Set-Content -Path (Join-Path $keysDir "NetSparkle_Ed25519.priv") -Value "${{ secrets.NETSPARKLE_PRIVATE_KEY }}" -NoNewline
+
+      - name: Build solution
+        shell: pwsh
+        run: dotnet build "${{ github.workspace }}\DiscordVideoCompressor.sln" --configuration Release
+
+      - name: Run tests
+        shell: pwsh
+        run: dotnet test "${{ github.workspace }}\DiscordVideoCompressor.Tests\DiscordVideoCompressor.Tests.csproj" --configuration Release --no-build
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & "${{ github.workspace }}\installer\Build-Installer.ps1"
+
+      - name: Generate appcast
+        shell: pwsh
+        run: |
+          & "${{ github.workspace }}\installer\New-AppCast.ps1" `
+            -ReleaseFile ".\output\DiscordVideoCompressor-Setup-${{ github.ref_name }}.exe" `
+            -Version "${{ github.ref_name }}" `
+            -GitHubTag "${{ github.ref_name }}"
+        working-directory: ${{ github.workspace }}\installer
+
+      - name: Publish GitHub release assets
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          & "${{ github.workspace }}\installer\Publish-GitHubRelease.ps1" -Tag "${{ github.ref_name }}"
