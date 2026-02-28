@@ -37,32 +37,6 @@
 - Установщик кладет приложение в `Program Files`, регистрирует деинсталлятор и создает ярлык в меню `Пуск`.
 - `ffmpeg.exe` по-прежнему остается встроенным ресурсом внутри приложения. Отдельно ставить ffmpeg пользователю не требуется.
 
-## Автообновления
-
-- NetSparkle уже привязан к GitHub Releases через [DiscordVideoCompressor/AppUpdaterSettings.cs](./DiscordVideoCompressor/AppUpdaterSettings.cs).
-- Приложение проверяет обновления по адресу:
-  - `https://github.com/KickerMix/DiscordVideoCompressor/releases/latest/download/appcast.xml`
-- В репозитории хранится публичный Ed25519-ключ: [installer/keys/NetSparkle_Ed25519.pub](./installer/keys/NetSparkle_Ed25519.pub). Приватный ключ остается локальным и исключен из git.
-- Для генерации appcast-файлов под каждый релиз используется [installer/New-AppCast.ps1](./installer/New-AppCast.ps1).
-- Для загрузки installer-а, `appcast.xml` и `appcast.xml.signature` в GitHub Release добавлен [installer/Publish-GitHubRelease.ps1](./installer/Publish-GitHubRelease.ps1). Скрипт использует `GITHUB_TOKEN`.
-- Рекомендуемый release flow:
-  1. Собрать установщик через `installer/Build-Installer.ps1`.
-  2. Сгенерировать appcast для тега, например `1.1.3`, через `installer/New-AppCast.ps1`.
-  3. Задать `GITHUB_TOKEN` и загрузить installer и appcast-assets через `installer/Publish-GitHubRelease.ps1 -Tag 1.1.3`.
-  4. После публикации релиза установленные копии приложения начнут видеть новую версию через GitHub Releases.
-
-## GitHub Actions Release
-
-- Репозиторий можно выпускать и полностью автоматически через GitHub Actions по git tag.
-- Рекомендуемый формат тега соответствует текущему репозиторию, без префикса: например `1.1.3`.
-- Workflow должен:
-  - проверить, что git tag совпадает с версией проекта;
-  - собрать и протестировать проект на Windows;
-  - собрать installer;
-  - восстановить приватный ключ NetSparkle из GitHub Secret;
-  - сгенерировать `appcast.xml`;
-  - создать или обновить GitHub Release и загрузить все assets.
-
 ## Использование
 
 1. **Выберите или перетащите видеофайл:**
