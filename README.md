@@ -50,14 +50,14 @@ The Discord Video Compressor is a Windows application designed to compress video
 - Upload the installer plus `appcast.xml` and `appcast.xml.signature` to a GitHub release with [installer/Publish-GitHubRelease.ps1](./installer/Publish-GitHubRelease.ps1). The script expects `GITHUB_TOKEN`.
 - Recommended release flow:
   1. Build the installer with `installer/Build-Installer.ps1`.
-  2. Generate the appcast for a tag, for example `1.1.1`, with `installer/New-AppCast.ps1`.
-  3. Set `GITHUB_TOKEN` and upload the installer and appcast assets with `installer/Publish-GitHubRelease.ps1 -Tag 1.1.1`.
+  2. Generate the appcast for a tag, for example `1.1.3`, with `installer/New-AppCast.ps1`.
+  3. Set `GITHUB_TOKEN` and upload the installer and appcast assets with `installer/Publish-GitHubRelease.ps1 -Tag 1.1.3`.
   4. After the release is published, installed copies will see the new version through GitHub Releases.
 
 ## GitHub Actions Release
 
 - The repository can also publish releases automatically from Git tags through GitHub Actions.
-- Recommended tag format is the current repository format without a prefix, for example `1.1.2`.
+- Recommended tag format is the current repository format without a prefix, for example `1.1.3`.
 - The workflow should:
   - verify that the git tag matches the project version;
   - build and test on Windows;

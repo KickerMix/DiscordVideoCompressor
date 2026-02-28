@@ -6,7 +6,7 @@
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
     <RootNamespace>DiscordVideoCompressor</RootNamespace>
     <AssemblyName>DiscordVideoCompressor</AssemblyName>
-    <Version>1.1.2</Version>
+    <Version>1.1.3</Version>
     <Authors>KickerMix</Authors>
     <Company>KickerMix</Company>
     <Product>Discord Video Compressor</Product>
@@ -25,9 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Resources\ffmpeg.exe" />
     <Compile Remove="Main.cs" />
     <Compile Remove="Main.Designer.cs" />
     <EmbeddedResource Remove="Main.resx" />
+    <EmbeddedResource Include="Resources\ffmpeg.exe" LogicalName="DiscordVideoCompressor.Resources.ffmpeg.exe" />
 
     <Compile Update="Form1_BR.Designer.cs">
       <DependentUpon>Form1_BR.cs</DependentUpon>

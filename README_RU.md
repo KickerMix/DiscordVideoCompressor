@@ -47,14 +47,14 @@
 - Для загрузки installer-а, `appcast.xml` и `appcast.xml.signature` в GitHub Release добавлен [installer/Publish-GitHubRelease.ps1](./installer/Publish-GitHubRelease.ps1). Скрипт использует `GITHUB_TOKEN`.
 - Рекомендуемый release flow:
   1. Собрать установщик через `installer/Build-Installer.ps1`.
-  2. Сгенерировать appcast для тега, например `1.1.1`, через `installer/New-AppCast.ps1`.
-  3. Задать `GITHUB_TOKEN` и загрузить installer и appcast-assets через `installer/Publish-GitHubRelease.ps1 -Tag 1.1.1`.
+  2. Сгенерировать appcast для тега, например `1.1.3`, через `installer/New-AppCast.ps1`.
+  3. Задать `GITHUB_TOKEN` и загрузить installer и appcast-assets через `installer/Publish-GitHubRelease.ps1 -Tag 1.1.3`.
   4. После публикации релиза установленные копии приложения начнут видеть новую версию через GitHub Releases.
 
 ## GitHub Actions Release
 
 - Репозиторий можно выпускать и полностью автоматически через GitHub Actions по git tag.
-- Рекомендуемый формат тега соответствует текущему репозиторию, без префикса: например `1.1.2`.
+- Рекомендуемый формат тега соответствует текущему репозиторию, без префикса: например `1.1.3`.
 - Workflow должен:
   - проверить, что git tag совпадает с версией проекта;
   - собрать и протестировать проект на Windows;

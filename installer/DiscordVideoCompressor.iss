@@ -1,7 +1,7 @@
 #define MyAppName "Discord Video Compressor"
 #define MyAppExeName "DiscordVideoCompressor.exe"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.1.2"
+  #define MyAppVersion "1.1.3"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\DiscordVideoCompressor\bin\Release\net8.0-windows\win-x64\publish"

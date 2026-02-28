@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -11,6 +12,7 @@ namespace DiscordVideoCompressor
 {
     internal sealed class FfmpegConversionService
     {
+        private const string FfmpegResourceName = "DiscordVideoCompressor.Resources.ffmpeg.exe";
         private readonly Action<string, double, double, bool, double> setProgressStage;
         private readonly Action<double, double?> updateProgress;
         private readonly Func<string, string> buildVideoFilter;
@@ -551,12 +553,36 @@ namespace DiscordVideoCompressor
             string tempDir = Path.Combine(Path.GetTempPath(), "DiscordVideoCompressor");
             string ffmpegPath = Path.Combine(tempDir, $"ffmpeg_{Guid.NewGuid():N}.exe");
             Directory.CreateDirectory(tempDir);
-            File.WriteAllBytes(ffmpegPath, Properties.Resources.ffmpeg);
+            using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(FfmpegResourceName)
+                ?? throw new InvalidOperationException($"Embedded ffmpeg resource '{FfmpegResourceName}' was not found."))
+            using (FileStream outputStream = new FileStream(ffmpegPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                resourceStream.CopyTo(outputStream);
+                outputStream.Flush();
+            }
+
+            ValidateExtractedFfmpeg(ffmpegPath);
             extractedFfmpegPath = ffmpegPath;
             return ffmpegPath;
         }
 
         private string GetFfmpegPath() => ExtractFfmpeg();
+
+        private void ValidateExtractedFfmpeg(string ffmpegPath)
+        {
+            using FileStream stream = new FileStream(ffmpegPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (stream.Length < 2)
+            {
+                throw new InvalidOperationException("Embedded ffmpeg resource is invalid or incomplete.");
+            }
+
+            int firstByte = stream.ReadByte();
+            int secondByte = stream.ReadByte();
+            if (firstByte != 'M' || secondByte != 'Z')
+            {
+                throw new InvalidOperationException("Embedded ffmpeg resource is invalid. Rebuild the application with a valid ffmpeg.exe payload.");
+            }
+        }
 
         private string MapValidationError(ConversionValidationError error)
         {
