@@ -732,25 +732,47 @@ namespace DiscordVideoCompressor
 
         private string FinalizeOutputFile(string tempFile, string outputFile)
         {
-            try
-            {
-                if (File.Exists(outputFile))
-                {
-                    File.Delete(outputFile);
-                }
+            string destination = GetIndexedOutputPath(outputFile);
+            int attempts = 0;
 
-                File.Move(tempFile, outputFile);
+            while (attempts < 100)
+            {
+                try
+                {
+                    File.Move(tempFile, destination);
+                    return destination;
+                }
+                catch (IOException)
+                {
+                    attempts++;
+                    destination = GetIndexedOutputPath(outputFile);
+                }
+            }
+
+            throw new IOException("Unable to create a unique output file name.");
+        }
+
+        private string GetIndexedOutputPath(string outputFile)
+        {
+            if (!File.Exists(outputFile))
+            {
                 return outputFile;
             }
-            catch (IOException)
+
+            string directory = Path.GetDirectoryName(outputFile);
+            string baseName = Path.GetFileNameWithoutExtension(outputFile);
+            string extension = Path.GetExtension(outputFile);
+
+            int index = 1;
+            while (true)
             {
-                string directory = Path.GetDirectoryName(outputFile);
-                string baseName = Path.GetFileNameWithoutExtension(outputFile);
-                string extension = Path.GetExtension(outputFile);
-                string suffix = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
-                string alternate = Path.Combine(directory, baseName + "_" + suffix + extension);
-                File.Move(tempFile, alternate);
-                return alternate;
+                string candidate = Path.Combine(directory, $"{baseName}_{index}{extension}");
+                if (!File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                index++;
             }
         }
     }

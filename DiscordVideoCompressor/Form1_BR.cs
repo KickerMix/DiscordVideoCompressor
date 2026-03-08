@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,8 @@ namespace DiscordVideoCompressor
         private string createdFile;
         private CancellationTokenSource cancellationTokenSource;
         private readonly FfmpegConversionService conversionService;
+        private readonly string startupInputFile;
+        private bool startupConversionStarted;
         private double progressStageStart;
         private double progressStageSpan = 1.0;
         private double progressStageDuration;
@@ -31,9 +34,10 @@ namespace DiscordVideoCompressor
         [DllImport("dwmapi.dll", PreserveSig = true)]
         public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
-        public Form1()
+        public Form1(string startupInputFile = null)
         {
             InitializeComponent();
+            this.startupInputFile = startupInputFile;
             conversionService = new FfmpegConversionService(
                 SetProgressStage,
                 UpdateProgress,
@@ -45,6 +49,7 @@ namespace DiscordVideoCompressor
                 SelectAudioBitrate,
                 CreateConversionText());
             FormClosing += Form1_FormClosing;
+            Shown += Form1_Shown;
 
             EnableDarkMode(Handle);
 
@@ -102,9 +107,8 @@ namespace DiscordVideoCompressor
             if (files.Length > 0)
             {
                 string file = files[0];
-                string extension = System.IO.Path.GetExtension(file).ToLowerInvariant();
 
-                if (extension == ".mp4" || extension == ".avi" || extension == ".mkv" || extension == ".webm")
+                if (IsSupportedVideoFile(file))
                 {
                     inputFile = file;
                     UpdateSelectedFileLabel();
@@ -114,6 +118,17 @@ namespace DiscordVideoCompressor
                     MessageBox.Show(Resources.Strings.InvalidFileFormatMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
+        }
+
+        private static bool IsSupportedVideoFile(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return false;
+            }
+
+            string extension = Path.GetExtension(filePath).ToLowerInvariant();
+            return extension == ".mp4" || extension == ".avi" || extension == ".mkv" || extension == ".webm";
         }
 
         private void comboBoxLanguage_SelectedIndexChanged(object sender, EventArgs e)
@@ -182,6 +197,11 @@ namespace DiscordVideoCompressor
 
         private async void convertButton_Click(object sender, EventArgs e)
         {
+            await StartConversionAsync();
+        }
+
+        private async Task StartConversionAsync()
+        {
             if (string.IsNullOrEmpty(inputFile))
             {
                 MessageBox.Show(Resources.Strings.SelectMediaFileMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -232,6 +252,32 @@ namespace DiscordVideoCompressor
                 cancellationTokenSource?.Dispose();
                 cancellationTokenSource = null;
             }
+        }
+
+        private async void Form1_Shown(object sender, EventArgs e)
+        {
+            if (startupConversionStarted || string.IsNullOrWhiteSpace(startupInputFile))
+            {
+                return;
+            }
+
+            startupConversionStarted = true;
+            if (!File.Exists(startupInputFile))
+            {
+                MessageBox.Show(Resources.Strings.FileNotExistError, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!IsSupportedVideoFile(startupInputFile))
+            {
+                MessageBox.Show(Resources.Strings.InvalidFileFormatMessage, Resources.Strings.ErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            ApplyDiscordDefaultPreset();
+            inputFile = startupInputFile;
+            UpdateSelectedFileLabel();
+            await StartConversionAsync();
         }
 
         private void cancelButton_Click(object sender, EventArgs e)
@@ -332,7 +378,7 @@ namespace DiscordVideoCompressor
                 return;
             }
 
-            selectedFileLabel.Text = Resources.Strings.SelectedFileLabelText + System.IO.Path.GetFileName(inputFile);
+            selectedFileLabel.Text = Resources.Strings.SelectedFileLabelText + Path.GetFileName(inputFile);
         }
 
         private void comboBoxVideoFps_SelectedIndexChanged(object sender, EventArgs e)

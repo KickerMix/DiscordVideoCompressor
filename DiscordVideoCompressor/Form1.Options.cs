@@ -163,6 +163,35 @@ namespace DiscordVideoCompressor
             return percent / 100.0;
         }
 
+        internal void ApplyDiscordDefaultPreset()
+        {
+            radioButton1.Checked = true;
+            radioButton3.Checked = false;
+            customSizeTextBox.Text = string.Empty;
+
+            SetComboBoxValue(comboBoxFormat, "MP4");
+            SetComboBoxValue(comboBoxResolution, "1920x1080");
+            SetComboBoxValue(comboBoxSampleRate, "44100");
+            SetComboBoxValue(comboBoxBitDepth, "s16");
+            SetComboBoxValue(comboBoxVideoFps, "60");
+
+            checkBoxSpeedEffect.Checked = false;
+            checkBoxDatamosh.Checked = false;
+            checkBoxGlitchEffect.Checked = false;
+
+            if (numericGlitchLength != null)
+            {
+                numericGlitchLength.Value = 1.2m;
+            }
+
+            if (numericGlitchChance != null)
+            {
+                numericGlitchChance.Value = 25m;
+            }
+
+            UpdateGlitchControlsVisibility();
+        }
+
         private void SetDefaultSelections()
         {
             if (comboBoxResolution.SelectedIndex < 0)
