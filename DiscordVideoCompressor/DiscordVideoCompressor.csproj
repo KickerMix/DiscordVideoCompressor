@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -6,7 +6,7 @@
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
     <RootNamespace>DiscordVideoCompressor</RootNamespace>
     <AssemblyName>DiscordVideoCompressor</AssemblyName>
-    <Version>1.1.3</Version>
+    <Version>1.1.4</Version>
     <Authors>KickerMix</Authors>
     <Company>KickerMix</Company>
     <Product>Discord Video Compressor</Product>
@@ -72,3 +72,4 @@
     </Compile>
   </ItemGroup>
 </Project>
+
