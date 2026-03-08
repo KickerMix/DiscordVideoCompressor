@@ -17,6 +17,7 @@ namespace DiscordVideoCompressor
         private CancellationTokenSource cancellationTokenSource;
         private readonly FfmpegConversionService conversionService;
         private readonly string startupInputFile;
+        private readonly bool copyOutputToClipboardOnSuccess;
         private bool startupConversionStarted;
         private double progressStageStart;
         private double progressStageSpan = 1.0;
@@ -34,10 +35,11 @@ namespace DiscordVideoCompressor
         [DllImport("dwmapi.dll", PreserveSig = true)]
         public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
-        public Form1(string startupInputFile = null)
+        public Form1(string startupInputFile = null, bool copyOutputToClipboardOnSuccess = false)
         {
             InitializeComponent();
             this.startupInputFile = startupInputFile;
+            this.copyOutputToClipboardOnSuccess = copyOutputToClipboardOnSuccess;
             conversionService = new FfmpegConversionService(
                 SetProgressStage,
                 UpdateProgress,
@@ -197,10 +199,10 @@ namespace DiscordVideoCompressor
 
         private async void convertButton_Click(object sender, EventArgs e)
         {
-            await StartConversionAsync();
+            await StartConversionAsync(false);
         }
 
-        private async Task StartConversionAsync()
+        private async Task StartConversionAsync(bool copyOutputToClipboardAfterSuccess)
         {
             if (string.IsNullOrEmpty(inputFile))
             {
@@ -235,6 +237,11 @@ namespace DiscordVideoCompressor
 
                 if (!string.IsNullOrWhiteSpace(createdFile))
                 {
+                    if (copyOutputToClipboardAfterSuccess)
+                    {
+                        TryCopyOutputFileToClipboard(createdFile);
+                    }
+
                     MessageBox.Show(Resources.Strings.ConversionSuccessMessage + createdFile, Resources.Strings.SuccessTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
@@ -277,7 +284,36 @@ namespace DiscordVideoCompressor
             ApplyDiscordDefaultPreset();
             inputFile = startupInputFile;
             UpdateSelectedFileLabel();
-            await StartConversionAsync();
+            await StartConversionAsync(copyOutputToClipboardOnSuccess);
+        }
+
+        private void TryCopyOutputFileToClipboard(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                return;
+            }
+
+            var fileDropList = new System.Collections.Specialized.StringCollection();
+            fileDropList.Add(filePath);
+
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                try
+                {
+                    Clipboard.SetFileDropList(fileDropList);
+                    return;
+                }
+                catch (ExternalException)
+                {
+                    Thread.Sleep(100);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Error copying converted file to clipboard: " + ex.Message);
+                    return;
+                }
+            }
         }
 
         private void cancelButton_Click(object sender, EventArgs e)

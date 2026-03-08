@@ -21,8 +21,8 @@ namespace DiscordVideoCompressor
 
             try
             {
-                string startupFilePath = TryGetStartupFilePath(args);
-                Application.Run(new Form1(startupFilePath));
+                StartupLaunchOptions launchOptions = ParseStartupLaunchOptions(args);
+                Application.Run(new Form1(launchOptions.FilePath, launchOptions.CopyOutputToClipboardOnSuccess));
             }
             finally
             {
@@ -30,11 +30,11 @@ namespace DiscordVideoCompressor
             }
         }
 
-        private static string TryGetStartupFilePath(string[] args)
+        private static StartupLaunchOptions ParseStartupLaunchOptions(string[] args)
         {
             if (args == null || args.Length == 0)
             {
-                return null;
+                return default;
             }
 
             for (int i = 0; i < args.Length; i++)
@@ -49,15 +49,15 @@ namespace DiscordVideoCompressor
                 {
                     if (!string.IsNullOrWhiteSpace(inlinePath))
                     {
-                        return NormalizePathArgument(inlinePath);
+                        return new StartupLaunchOptions(NormalizePathArgument(inlinePath), true);
                     }
 
                     if (i + 1 < args.Length)
                     {
-                        return NormalizePathArgument(args[i + 1]);
+                        return new StartupLaunchOptions(NormalizePathArgument(args[i + 1]), true);
                     }
 
-                    return null;
+                    return default;
                 }
 
                 if (arg.StartsWith("-", StringComparison.Ordinal) || arg.StartsWith("/", StringComparison.Ordinal))
@@ -65,10 +65,10 @@ namespace DiscordVideoCompressor
                     continue;
                 }
 
-                return NormalizePathArgument(arg);
+                return new StartupLaunchOptions(NormalizePathArgument(arg), false);
             }
 
-            return null;
+            return default;
         }
 
         private static bool TryParseConvertArgument(string argument, out string inlinePath)
@@ -114,6 +114,19 @@ namespace DiscordVideoCompressor
             }
 
             return trimmed;
+        }
+
+        private readonly struct StartupLaunchOptions
+        {
+            public StartupLaunchOptions(string filePath, bool copyOutputToClipboardOnSuccess)
+            {
+                FilePath = filePath;
+                CopyOutputToClipboardOnSuccess = copyOutputToClipboardOnSuccess;
+            }
+
+            public string FilePath { get; }
+
+            public bool CopyOutputToClipboardOnSuccess { get; }
         }
     }
 }

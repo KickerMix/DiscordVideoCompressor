@@ -6,7 +6,7 @@
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
     <RootNamespace>DiscordVideoCompressor</RootNamespace>
     <AssemblyName>DiscordVideoCompressor</AssemblyName>
-    <Version>1.1.4</Version>
+    <Version>1.1.5</Version>
     <Authors>KickerMix</Authors>
     <Company>KickerMix</Company>
     <Product>Discord Video Compressor</Product>
@@ -72,4 +72,5 @@
     </Compile>
   </ItemGroup>
 </Project>
+
 

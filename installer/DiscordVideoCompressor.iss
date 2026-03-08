@@ -1,7 +1,7 @@
 ﻿#define MyAppName "Discord Video Compressor"
 #define MyAppExeName "DiscordVideoCompressor.exe"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.1.4"
+  #define MyAppVersion "1.1.5"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\DiscordVideoCompressor\bin\Release\net8.0-windows\win-x64\publish"
@@ -72,4 +72,5 @@ Root: HKCR; Subkey: "SystemFileAssociations\.webm\shell\DiscordVideoCompressor.C
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
 
