@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Validate FFmpeg LFS payload
+        shell: pwsh
+        run: |
+          $path = "${{ github.workspace }}\DiscordVideoCompressor\Resources\ffmpeg.exe"
+          $expectedHash = "CA7E2992D973AA5B042BE093EDA6FDCE43CA41AAFDD647148278589B1D753F60"
+          if (-not (Test-Path $path)) {
+            throw "ffmpeg.exe is missing."
+          }
+
+          $actualHash = (Get-FileHash $path -Algorithm SHA256).Hash
+          if ($actualHash -ne $expectedHash) {
+            throw "ffmpeg.exe checksum mismatch. Expected $expectedHash, got $actualHash."
+          }
+
+      - name: Restore
+        run: dotnet restore "${{ github.workspace }}\DiscordVideoCompressor.sln"
+
+      - name: Build
+        run: dotnet build "${{ github.workspace }}\DiscordVideoCompressor.sln" --configuration Release --no-restore -warnaserror
+
+      - name: Validate version and PowerShell scripts
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content "${{ github.workspace }}\DiscordVideoCompressor\DiscordVideoCompressor.csproj"
+          $version = $project.Project.PropertyGroup.Version | Select-Object -First 1
+          $targetFramework = $project.Project.PropertyGroup.TargetFramework | Select-Object -First 1
+          $exePath = "${{ github.workspace }}\DiscordVideoCompressor\bin\Release\$targetFramework\DiscordVideoCompressor.exe"
+          $fileVersion = (Get-Item $exePath).VersionInfo.FileVersion
+          if (-not $fileVersion.StartsWith($version)) {
+            throw "Built executable version '$fileVersion' does not match project version '$version'."
+          }
+
+          $parseErrors = @()
+          Get-ChildItem "${{ github.workspace }}" -Recurse -Filter "*.ps1" | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            $parseErrors += $errors
+          }
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_ }
+            throw "PowerShell script syntax validation failed."
+          }
+
+      - name: Test with coverage
+        run: dotnet test "${{ github.workspace }}\DiscordVideoCompressor.sln" --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory "${{ github.workspace }}\TestResults"
+
+      - name: Enforce coverage floor
+        shell: pwsh
+        run: |
+          $coverageFile = Get-ChildItem "${{ github.workspace }}\TestResults" -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
+          if (-not $coverageFile) {
+            throw "Coverage report was not generated."
+          }
+
+          [xml]$coverage = Get-Content $coverageFile.FullName
+          $lineRate = [double]$coverage.coverage.'line-rate'
+          if ($lineRate -lt 0.30) {
+            throw "Line coverage $lineRate is below the required 0.30 floor."
+          }
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: TestResults/**/coverage.cobertura.xml

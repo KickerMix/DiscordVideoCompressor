@@ -545,5 +545,17 @@ namespace DiscordVideoCompressor.Resources {
                 return ResourceManager.GetString("VideoDurationErrorMessage", resourceCulture);
             }
         }
+
+        internal static string LicensesLabelText {
+            get {
+                return ResourceManager.GetString("LicensesLabelText", resourceCulture);
+            }
+        }
+
+        internal static string LicensesMessageText {
+            get {
+                return ResourceManager.GetString("LicensesMessageText", resourceCulture);
+            }
+        }
     }
 }

@@ -16,14 +16,32 @@ $innoScriptFullPath = [System.IO.Path]::GetFullPath((Join-Path $scriptRoot $Inno
 
 [xml]$projectXml = Get-Content -Path $projectFullPath
 $version = $projectXml.Project.PropertyGroup.Version | Select-Object -First 1
+$targetFramework = $projectXml.Project.PropertyGroup.TargetFramework | Select-Object -First 1
 if ([string]::IsNullOrWhiteSpace($version)) {
     throw "Version property not found in $projectFullPath"
 }
+
+if ([string]::IsNullOrWhiteSpace($targetFramework)) {
+    throw "TargetFramework property not found in $projectFullPath"
+}
+
+$projectDirectory = Split-Path -Parent $projectFullPath
+$publishDirectory = Join-Path $projectDirectory "bin\$Configuration\$targetFramework\$RuntimeIdentifier\publish"
 
 Write-Host "Publishing version $version..."
 dotnet publish $projectFullPath -c $Configuration -r $RuntimeIdentifier /p:PublishProfile=$publishProfileFullPath
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE"
+}
+
+$publishedExe = Join-Path $publishDirectory "DiscordVideoCompressor.exe"
+if (-not (Test-Path $publishedExe)) {
+    throw "Published executable was not found: $publishedExe"
+}
+
+$publishedVersion = (Get-Item $publishedExe).VersionInfo.FileVersion
+if (-not $publishedVersion.StartsWith($version)) {
+    throw "Published executable version '$publishedVersion' does not match project version '$version'."
 }
 
 $resolvedInnoCompilerPath = $InnoCompilerPath
@@ -53,7 +71,7 @@ if ([string]::IsNullOrWhiteSpace($resolvedInnoCompilerPath)) {
 }
 
 Write-Host "Building installer..."
-& $resolvedInnoCompilerPath "/DMyAppVersion=$version" $innoScriptFullPath
+& $resolvedInnoCompilerPath "/DMyAppVersion=$version" "/DPublishDir=$publishDirectory" $innoScriptFullPath
 if ($LASTEXITCODE -ne 0) {
     throw "ISCC.exe failed with exit code $LASTEXITCODE"
 }

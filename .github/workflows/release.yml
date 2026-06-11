@@ -31,9 +31,15 @@ jobs:
             throw "ffmpeg.exe was not found at $ffmpegPath"
           }
 
-          $fileInfo = Get-Item $ffmpegPath
-          if ($fileInfo.Length -lt 100MB) {
-            throw "ffmpeg.exe looks invalid or incomplete. Expected a real LFS payload, got $($fileInfo.Length) bytes."
+          $expectedHash = "CA7E2992D973AA5B042BE093EDA6FDCE43CA41AAFDD647148278589B1D753F60"
+          $actualHash = (Get-FileHash $ffmpegPath -Algorithm SHA256).Hash
+          if ($actualHash -ne $expectedHash) {
+            throw "ffmpeg.exe checksum mismatch. Expected $expectedHash, got $actualHash."
+          }
+
+          $versionOutput = & $ffmpegPath -hide_banner -version | Select-Object -First 1
+          if ($versionOutput -notmatch "ffmpeg version n8\.1") {
+            throw "Unexpected FFmpeg version: $versionOutput"
           }
 
       - name: Install Inno Setup
@@ -42,7 +48,7 @@ jobs:
 
       - name: Install NetSparkle appcast generator
         shell: pwsh
-        run: dotnet tool install --global NetSparkleUpdater.Tools.AppCastGenerator --version 2.8.6
+        run: dotnet tool install --global NetSparkleUpdater.Tools.AppCastGenerator --version 2.9.0
 
       - name: Validate tag matches project version
         shell: pwsh
@@ -63,11 +69,22 @@ jobs:
 
       - name: Build solution
         shell: pwsh
-        run: dotnet build "${{ github.workspace }}\DiscordVideoCompressor.sln" --configuration Release
+        run: dotnet build "${{ github.workspace }}\DiscordVideoCompressor.sln" --configuration Release -warnaserror
 
       - name: Run tests
         shell: pwsh
-        run: dotnet test "${{ github.workspace }}\DiscordVideoCompressor.Tests\DiscordVideoCompressor.Tests.csproj" --configuration Release --no-build
+        run: dotnet test "${{ github.workspace }}\DiscordVideoCompressor.Tests\DiscordVideoCompressor.Tests.csproj" --configuration Release --no-build --collect:"XPlat Code Coverage"
+
+      - name: Validate built application version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content "${{ github.workspace }}\DiscordVideoCompressor\DiscordVideoCompressor.csproj"
+          $targetFramework = $project.Project.PropertyGroup.TargetFramework | Select-Object -First 1
+          $exePath = "${{ github.workspace }}\DiscordVideoCompressor\bin\Release\$targetFramework\DiscordVideoCompressor.exe"
+          $fileVersion = (Get-Item $exePath).VersionInfo.FileVersion
+          if (-not $fileVersion.StartsWith("${{ github.ref_name }}")) {
+            throw "Built executable version '$fileVersion' does not match tag '${{ github.ref_name }}'."
+          }
 
       - name: Build installer
         shell: pwsh
@@ -82,6 +99,11 @@ jobs:
             -Version "${{ github.ref_name }}" `
             -GitHubTag "${{ github.ref_name }}"
         working-directory: ${{ github.workspace }}\installer
+
+      - name: Package FFmpeg corresponding source
+        shell: pwsh
+        run: |
+          & "${{ github.workspace }}\installer\New-ThirdPartySourceBundle.ps1"
 
       - name: Publish GitHub release assets
         shell: pwsh

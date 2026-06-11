@@ -29,7 +29,15 @@ namespace DiscordVideoCompressor
                     return false;
                 }
 
-                targetSizeBytes = customSizeMb * 1024 * 1024;
+                try
+                {
+                    targetSizeBytes = checked(customSizeMb * 1024L * 1024L);
+                }
+                catch (OverflowException)
+                {
+                    validationMessage = Resources.Strings.EnterValidSizeMessage;
+                    return false;
+                }
             }
             else
             {

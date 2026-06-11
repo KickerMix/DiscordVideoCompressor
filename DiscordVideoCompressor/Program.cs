@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace DiscordVideoCompressor
@@ -16,8 +17,17 @@ namespace DiscordVideoCompressor
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            appUpdater = AppUpdater.CreateOrNull();
-            appUpdater?.Start();
+            try
+            {
+                appUpdater = AppUpdater.CreateOrNull();
+                appUpdater?.Start();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Automatic updater failed to start: " + ex.Message);
+                appUpdater?.Dispose();
+                appUpdater = null;
+            }
 
             try
             {

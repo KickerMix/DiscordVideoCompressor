@@ -22,7 +22,7 @@ $appCastDirectoryFullPath = [System.IO.Path]::GetFullPath((Join-Path $scriptRoot
 $notesFileFullPath = if ($NotesFile) { [System.IO.Path]::GetFullPath((Join-Path $scriptRoot $NotesFile)) } else { $null }
 
 if (-not $installerPathProvided) {
-    $installerCandidate = Get-ChildItem -Path (Join-Path $scriptRoot "output") -Filter "*.exe" | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+    $installerCandidate = Get-ChildItem -Path (Join-Path $scriptRoot "output") -Filter "DiscordVideoCompressor-Setup-$Tag.exe" | Select-Object -First 1
     if ($installerCandidate) {
         $installerFullPath = $installerCandidate.FullName
     }
@@ -71,20 +71,25 @@ try {
     $release = Invoke-RestMethod -Method Get -Headers $headers -Uri "$repoApiBase/releases/tags/$Tag"
 }
 catch {
-    $release = Invoke-RestMethod -Method Post -Headers $headers -Uri "$repoApiBase/releases" -Body $releaseBody
+    $statusCode = $_.Exception.Response.StatusCode.value__
+    if ($statusCode -ne 404) {
+        throw
+    }
+
+    $release = Invoke-RestMethod -Method Post -Headers $headers -ContentType "application/json" -Uri "$repoApiBase/releases" -Body $releaseBody
+}
+
+if ($release) {
+    $release = Invoke-RestMethod -Method Patch -Headers $headers -ContentType "application/json" -Uri "$repoApiBase/releases/$($release.id)" -Body $releaseBody
 }
 
 $filesToUpload = @($installerFullPath) + ($appCastFiles.FullName)
 
 foreach ($file in $filesToUpload) {
     $assetName = [System.IO.Path]::GetFileName($file)
-    try {
-        $existingAsset = $release.assets | Where-Object { $_.name -eq $assetName } | Select-Object -First 1
-        if ($existingAsset) {
-            Invoke-RestMethod -Method Delete -Headers $headers -Uri "$repoApiBase/releases/assets/$($existingAsset.id)" | Out-Null
-        }
-    }
-    catch {
+    $existingAsset = $release.assets | Where-Object { $_.name -eq $assetName } | Select-Object -First 1
+    if ($existingAsset) {
+        Invoke-RestMethod -Method Delete -Headers $headers -Uri "$repoApiBase/releases/assets/$($existingAsset.id)" | Out-Null
     }
 
     $uploadHeaders = @{

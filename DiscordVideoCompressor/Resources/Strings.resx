@@ -279,4 +279,10 @@
   <data name="FfmpegExtractionErrorMessage" xml:space="preserve">
     <value>Ffmpeg Extraction failed.</value>
   </data>
+  <data name="LicensesLabelText" xml:space="preserve">
+    <value>Licenses</value>
+  </data>
+  <data name="LicensesMessageText" xml:space="preserve">
+    <value>Discord Video Compressor is MIT licensed. The bundled FFmpeg executable is a separate GPLv3-or-later program. See THIRD-PARTY-NOTICES.md and FFMPEG-GPL-LICENSE.txt beside the application for source and license details.</value>
+  </data>
 </root>

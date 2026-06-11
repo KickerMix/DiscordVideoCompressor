@@ -1,10 +1,10 @@
 ﻿#define MyAppName "Discord Video Compressor"
 #define MyAppExeName "DiscordVideoCompressor.exe"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.1.5"
+  #error MyAppVersion must be supplied by Build-Installer.ps1
 #endif
 #ifndef PublishDir
-  #define PublishDir "..\DiscordVideoCompressor\bin\Release\net8.0-windows\win-x64\publish"
+  #error PublishDir must be supplied by Build-Installer.ps1
 #endif
 
 [Setup]

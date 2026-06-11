@@ -10,6 +10,25 @@ public class ConversionAlgorithmsTests
     }
 
     [Fact]
+    public void CalculateVideoBitrate_ReservesContainerAndAudioBudget()
+    {
+        long bitrate = ConversionAlgorithms.CalculateVideoBitrate(10 * 1024 * 1024, 60, 96_000);
+
+        Assert.InRange(bitrate, 1_260_000, 1_280_000);
+        Assert.Equal(0, ConversionAlgorithms.CalculateVideoBitrate(0, 60, 0));
+        Assert.Equal(0, ConversionAlgorithms.CalculateVideoBitrate(100, 0, 0));
+    }
+
+    [Theory]
+    [InlineData("webm", 44100, 48000)]
+    [InlineData("webm", 22050, 24000)]
+    [InlineData("mp4", 44100, 44100)]
+    public void NormalizeAudioSampleRate_UsesEncoderSupportedValue(string format, int requested, int expected)
+    {
+        Assert.Equal(expected, ConversionAlgorithms.NormalizeAudioSampleRate(format, requested));
+    }
+
+    [Fact]
     public void BuildSpeedSegments_ReturnsBoundedContinuousSegments()
     {
         var segments = ConversionAlgorithms.BuildSpeedSegments(12);
@@ -69,11 +88,24 @@ public class ConversionAlgorithmsTests
             new DatamoshSegment(1, 2, 1.0, false, 888)
         };
 
-        string filter = FilterGraphBuilder.BuildDatamoshFilterComplex("640x360", "u8", 44100, 24, new System.Collections.Generic.List<DatamoshSegment>(segments), out _, out _);
+        string filter = FilterGraphBuilder.BuildDatamoshFilterComplex("640x360", "u8", 44100, 24, new System.Collections.Generic.List<DatamoshSegment>(segments), true, out _, out _);
 
         Assert.Contains("random=frames=30:seed=777", filter);
         Assert.Contains("concat=n=2:v=1:a=1", filter);
         Assert.Contains("fps=fps=24", filter);
+    }
+
+    [Fact]
+    public void FilterBuilders_OmitAudioGraph_WhenInputHasNoAudio()
+    {
+        string speedFilter = FilterGraphBuilder.BuildSpeedFilterComplex(2, "640x360", "s16", 44100, 44100, 24, null, false, out _, out string speedAudioLabel);
+        var segments = ConversionAlgorithms.BuildDatamoshSegments(2, 42, 0.5, 0.5);
+        string glitchFilter = FilterGraphBuilder.BuildDatamoshFilterComplex("640x360", "s16", 44100, 24, segments, false, out _, out string glitchAudioLabel);
+
+        Assert.DoesNotContain("[0:a]", speedFilter);
+        Assert.DoesNotContain("[0:a]", glitchFilter);
+        Assert.Null(speedAudioLabel);
+        Assert.Null(glitchAudioLabel);
     }
 
     [Fact]

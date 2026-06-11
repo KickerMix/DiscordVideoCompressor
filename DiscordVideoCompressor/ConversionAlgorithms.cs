@@ -5,6 +5,8 @@ namespace DiscordVideoCompressor
 {
     internal static class ConversionAlgorithms
     {
+        private const double ContainerSafetyFactor = 0.98;
+
         public static int SelectAudioBitrate(long targetBitrate)
         {
             int[] options = { 32000, 48000, 64000, 96000, 128000 };
@@ -16,6 +18,43 @@ namespace DiscordVideoCompressor
                 if (Math.Abs(option - desired) < Math.Abs(closest - desired))
                 {
                     closest = option;
+                }
+            }
+
+            return closest;
+        }
+
+        public static long CalculateVideoBitrate(long targetSizeBytes, double durationSeconds, int audioBitrate)
+        {
+            if (targetSizeBytes <= 0 || durationSeconds <= 0)
+            {
+                return 0;
+            }
+
+            double totalBitrate = targetSizeBytes * 8.0 / durationSeconds * ContainerSafetyFactor;
+            if (double.IsNaN(totalBitrate) || double.IsInfinity(totalBitrate) || totalBitrate > long.MaxValue)
+            {
+                return 0;
+            }
+
+            return Math.Max(0, (long)totalBitrate - Math.Max(0, audioBitrate));
+        }
+
+        public static int NormalizeAudioSampleRate(string outputFormat, int requestedSampleRate)
+        {
+            int fallback = requestedSampleRate > 0 ? requestedSampleRate : 44100;
+            if (!string.Equals(outputFormat, "webm", StringComparison.OrdinalIgnoreCase))
+            {
+                return fallback;
+            }
+
+            int[] opusSampleRates = { 8000, 12000, 16000, 24000, 48000 };
+            int closest = opusSampleRates[0];
+            foreach (int sampleRate in opusSampleRates)
+            {
+                if (Math.Abs(sampleRate - fallback) < Math.Abs(closest - fallback))
+                {
+                    closest = sampleRate;
                 }
             }
 

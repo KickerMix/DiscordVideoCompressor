@@ -101,13 +101,13 @@ namespace DiscordVideoCompressor
             return builder.ToString().TrimEnd(';');
         }
 
-        public static string BuildDatamoshFilterComplex(string resolution, string audioBitDepth, int outputAudioSampleRate, int videoFps, List<DatamoshSegment> segments, out string videoOutLabel, out string audioOutLabel)
+        public static string BuildDatamoshFilterComplex(string resolution, string audioBitDepth, int outputAudioSampleRate, int videoFps, List<DatamoshSegment> segments, bool includeAudio, out string videoOutLabel, out string audioOutLabel)
         {
             if (segments == null || segments.Count == 0)
             {
                 videoOutLabel = "[vout]";
-                audioOutLabel = "[aout]";
-                return "[0:v]null[vout];[0:a]anull[aout]";
+                audioOutLabel = includeAudio ? "[aout]" : null;
+                return includeAudio ? "[0:v]null[vout];[0:a]anull[aout]" : "[0:v]null[vout]";
             }
 
             var builder = new StringBuilder();
@@ -123,16 +123,23 @@ namespace DiscordVideoCompressor
                 }
 
                 builder.AppendFormat(CultureInfo.InvariantCulture, "[0:v]{0}[v{1}];", videoFilters, i);
-                string audioFilters = $"atrim=start={segment.SourceStart.ToString(CultureInfo.InvariantCulture)}:end={(segment.SourceStart + (segment.End - segment.Start)).ToString(CultureInfo.InvariantCulture)},asetpts=PTS-STARTPTS";
-                builder.AppendFormat(CultureInfo.InvariantCulture, "[0:a]{0}[a{1}];", audioFilters, i);
+                if (includeAudio)
+                {
+                    string audioFilters = $"atrim=start={segment.SourceStart.ToString(CultureInfo.InvariantCulture)}:end={(segment.SourceStart + (segment.End - segment.Start)).ToString(CultureInfo.InvariantCulture)},asetpts=PTS-STARTPTS";
+                    builder.AppendFormat(CultureInfo.InvariantCulture, "[0:a]{0}[a{1}];", audioFilters, i);
+                }
             }
 
             for (int i = 0; i < segments.Count; i++)
             {
-                builder.AppendFormat("[v{0}][a{0}]", i);
+                builder.AppendFormat("[v{0}]", i);
+                if (includeAudio)
+                {
+                    builder.AppendFormat("[a{0}]", i);
+                }
             }
 
-            builder.AppendFormat("concat=n={0}:v=1:a=1[vtmp][atmp];", segments.Count);
+            builder.AppendFormat(includeAudio ? "concat=n={0}:v=1:a=1[vtmp][atmp];" : "concat=n={0}:v=1:a=0[vtmp];", segments.Count);
             var videoPostFilters = new List<string>();
             if (!string.IsNullOrWhiteSpace(scaleFilter))
             {
@@ -148,9 +155,13 @@ namespace DiscordVideoCompressor
                 ? $"[vtmp]{string.Join(",", videoPostFilters)}[vout];"
                 : "[vtmp]null[vout];");
 
-            builder.AppendFormat("[atmp]{0}[aout]", BuildAudioPostFilter(audioBitDepth));
+            if (includeAudio)
+            {
+                builder.AppendFormat("[atmp]{0}[aout]", BuildAudioPostFilter(audioBitDepth));
+            }
+
             videoOutLabel = "[vout]";
-            audioOutLabel = "[aout]";
+            audioOutLabel = includeAudio ? "[aout]" : null;
             return builder.ToString().TrimEnd(';');
         }
 

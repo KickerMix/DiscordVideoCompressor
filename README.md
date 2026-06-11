@@ -1,83 +1,77 @@
 # Discord Video Compressor
 
-## Other Languages
-- [Русская версия](./README_RU.md)
+[Русская версия](./README_RU.md)
 
-## Overview
-
-The Discord Video Compressor is a Windows application designed to compress video files to meet Discord's file size limits. The tool utilizes `ffmpeg` to compress videos, offering pre-configured size presets and the option to specify custom sizes.
+Windows desktop application that compresses videos to a selected file-size
+limit using FFmpeg.
 
 ## Features
 
-- **Drag and Drop Support:** Simply drag and drop your video files into the application to start the compression process.
-- **Language Support:** The application supports English (EN) and Russian (RU) languages, which can be selected via a dropdown menu.
-- **Dark Mode:** Automatically adjusts the application theme to match the system's dark mode settings.
-- **ffmpeg Integration:** The application ships `ffmpeg.exe` as an embedded resource, so the user still gets a single app package without a separate dependency setup.
-- **Preset and Custom Compression:** Users can use the built-in Discord preset (9 MB) or specify a custom target size for compression.
-- **Progress Monitoring:** Displays the progress of the compression process with a progress bar.
-- **Force Stop:** Users can forcibly stop the compression process if necessary.
+- MP4/H.264 and WebM/VP9 output.
+- Preset 9 MB target and custom size limits.
+- Drag and drop and Explorer context-menu conversion.
+- Videos with or without an audio stream.
+- Resolution, frame-rate, sample-rate and sample-format controls.
+- Optional speed, glitch and datamosh effects.
+- Progress stages, encoding speed, ETA and cancellation.
+- English and Russian UI, system dark-mode integration.
+- Signed automatic updates through NetSparkle.
 
-## Installation
+## Requirements
 
-1. **Clone the repository:**
+- Windows 10 version 1809 or newer, x64.
+- Visual Studio 2022 or .NET 8 SDK for source builds.
+- Git LFS when cloning the repository because `ffmpeg.exe` is an LFS object.
 
-   ```
-   sh
-   git clone https://github.com/yourusername/DiscordVideoCompressor.git
-   ```
+The release installer is self-contained. End users do not need to install .NET
+or FFmpeg separately.
 
-2. **Build the project:**
-   - Open the solution file (`DiscordVideoCompressor.sln`) in Visual Studio 2022 or build it with the .NET 8 SDK.
-   - Build the project.
+## Build
 
-3. **Run the application:**
-   - After building, run the `DiscordVideoCompressor.exe` from the output directory.
+```powershell
+git lfs install
+git clone https://github.com/KickerMix/DiscordVideoCompressor.git
+cd DiscordVideoCompressor
+dotnet build DiscordVideoCompressor.sln -c Release
+dotnet test DiscordVideoCompressor.sln -c Release
+```
 
-## Windows Installer
+Build the Windows installer with:
 
-- The repository now includes an Inno Setup script at [installer/DiscordVideoCompressor.iss](./installer/DiscordVideoCompressor.iss).
-- Build a release installer from [installer/Build-Installer.ps1](./installer/Build-Installer.ps1). The script publishes the single-file Win64 build first and then compiles `setup.exe`.
-- The installer places the app in `Program Files`, registers an uninstaller, and creates a Start menu shortcut so the user can launch it through `Start`.
-- `ffmpeg.exe` remains embedded inside the application binary. The installer does not add a separate ffmpeg dependency.
+```powershell
+.\installer\Build-Installer.ps1
+```
+
+Inno Setup 6 must be installed for the installer step.
 
 ## Usage
 
-1. **Select or Drag and Drop a Video File:**
-   - You can drag and drop a video file into the application window or use the "Choose Media File" button to select a file.
-   - Supported formats: `.mp4`, `.avi`, `.mkv`, `.webm`.
+1. Select or drop an `.mp4`, `.avi`, `.mkv` or `.webm` file.
+2. Choose MP4 or WebM and the target size.
+3. Adjust optional encoding/effect settings.
+4. Start conversion. Output is written beside the source file using a
+   `_cnvrtd` suffix; an index is added instead of overwriting an existing file.
 
-2. **Choose the Compression Size:**
-   - Use the default 9 MB Discord preset or specify a custom size in MB.
+The installer can add an Explorer context-menu command. Context-menu conversion
+uses the 9 MB MP4 preset and places the output file on the clipboard when done.
 
-3. **Start Compression:**
-   - Click the "Convert" button to start the compression process.
-   - The progress of the compression will be displayed in the progress bar.
+## FFmpeg Runtime
 
-4. **Force Stop (if needed):**
-   - You can stop the compression at any time by clicking the "Force Stop" button.
+FFmpeg 8.1 is embedded in the application. At runtime it is extracted once to a
+content-hashed cache file under `%TEMP%\DiscordVideoCompressor`. Obsolete cache
+copies are removed automatically.
 
-5. **Language Selection:**
-   - Change the language of the application between English and Russian using the dropdown in the top-right corner.
+To update the pinned binary and license after reviewing a new build:
 
-## Dependencies
+```powershell
+.\scripts\Update-Ffmpeg.ps1
+```
 
-- **ffmpeg:** The application deliberately keeps `ffmpeg.exe` as an embedded resource and extracts it automatically at runtime. No external installation is required, and the distributed build still includes everything needed for end users.
-- **NetSparkle:** Automatic updates are prepared through NetSparkle and are expected to distribute the installer package in future releases.
+## Licensing
 
-## Contributing
+The application source is MIT licensed; see [LICENSE.txt](./LICENSE.txt).
 
-If you would like to contribute to the project, feel free to fork the repository and submit a pull request.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
-
-## Troubleshooting
-
-- **ffmpeg Not Found Error:** Ensure that `ffmpeg.exe` is available in the temporary directory. The application should automatically handle extraction and deletion, but if errors persist, check file permissions.
-- **Video File Not Supported:** Ensure your video file is in one of the supported formats (`.mp4`, `.avi`, `.mkv`, `.webm`).
-- **Compression Fails:** If the compression process fails repeatedly, try lowering the target size.
-
-## Contact
-
-For any issues or suggestions, please open an issue on GitHub or contact me at Discord: [KickerMix].
+The bundled FFmpeg executable is a separate GPLv3-or-later program. Its license
+is in [FFMPEG-GPL-LICENSE.txt](./FFMPEG-GPL-LICENSE.txt), and exact build/source
+information is in [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md). Each
+GitHub release also includes `ffmpeg-corresponding-source.zip`.

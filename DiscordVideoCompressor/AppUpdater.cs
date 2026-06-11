@@ -1,11 +1,11 @@
 using System;
 using System.Drawing;
 using System.IO;
-using System.Reflection;
 using NetSparkleUpdater;
 using NetSparkleUpdater.Enums;
 using NetSparkleUpdater.Interfaces;
 using NetSparkleUpdater.SignatureVerifiers;
+using NetSparkleUpdater.UI.WinForms;
 
 namespace DiscordVideoCompressor
 {
@@ -54,43 +54,17 @@ namespace DiscordVideoCompressor
 
         private static IUIFactory CreateUiFactory()
         {
-            // NetSparkle's WinForms UI package ships the UIFactory type; reflection keeps
-            // the app resilient across minor API differences while still using the package.
-            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            string executablePath = Path.Combine(AppContext.BaseDirectory, "DiscordVideoCompressor.exe");
+            if (File.Exists(executablePath))
             {
-                Type uiFactoryType = assembly.GetType("NetSparkleUpdater.UI.WinForms.UIFactory");
-                if (uiFactoryType == null)
+                Icon appIcon = Icon.ExtractAssociatedIcon(executablePath);
+                if (appIcon != null)
                 {
-                    continue;
-                }
-
-                try
-                {
-                    string executablePath = Path.Combine(AppContext.BaseDirectory, "DiscordVideoCompressor.exe");
-                    using Icon appIcon = File.Exists(executablePath)
-                        ? Icon.ExtractAssociatedIcon(executablePath)
-                        : null;
-                    if (appIcon != null)
-                    {
-                        object instance = Activator.CreateInstance(uiFactoryType, appIcon);
-                        if (instance != null)
-                        {
-                            return instance as IUIFactory;
-                        }
-                    }
-                }
-                catch
-                {
-                }
-
-                object fallback = Activator.CreateInstance(uiFactoryType);
-                if (fallback != null)
-                {
-                    return fallback as IUIFactory;
+                    return new UIFactory(appIcon);
                 }
             }
 
-            return null;
+            return new UIFactory();
         }
     }
 }

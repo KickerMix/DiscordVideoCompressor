@@ -24,19 +24,18 @@ namespace DiscordVideoCompressor
 
         private void SetProgressStage(string stageName, double stageStart, double stageSpan, bool hasProgress, double stageDuration)
         {
-            progressStageName = stageName;
-            progressStageStart = Math.Max(0.0, Math.Min(1.0, stageStart));
-            progressStageSpan = Math.Max(0.0, Math.Min(1.0, stageSpan));
-            progressStageHasProgress = hasProgress;
-            progressStageDuration = stageDuration;
-            progressCurrentSeconds = 0;
-            progressTotalSeconds = hasProgress ? stageDuration : 0;
-            progressEtaSeconds = null;
-            progressLastSpeed = 0;
-            progressLastPercent = progressStageStart * 100.0;
-
-            BeginInvoke((Action)(() =>
+            PostToUi(() =>
             {
+                progressStageName = stageName;
+                progressStageStart = Math.Max(0.0, Math.Min(1.0, stageStart));
+                progressStageSpan = Math.Max(0.0, Math.Min(1.0, stageSpan));
+                progressStageHasProgress = hasProgress;
+                progressStageDuration = stageDuration;
+                progressCurrentSeconds = 0;
+                progressTotalSeconds = hasProgress ? stageDuration : 0;
+                progressEtaSeconds = null;
+                progressLastSpeed = 0;
+                progressLastPercent = progressStageStart * 100.0;
                 progressBar1.Style = hasProgress ? ProgressBarStyle.Continuous : ProgressBarStyle.Marquee;
                 if (hasProgress)
                 {
@@ -44,49 +43,67 @@ namespace DiscordVideoCompressor
                 }
 
                 ApplyProgressText();
-            }));
+            });
         }
 
         private void UpdateProgress(double currentSeconds, double? speedValue)
         {
-            if (!progressStageHasProgress || progressStageDuration <= 0)
+            PostToUi(() =>
+            {
+                if (!progressStageHasProgress || progressStageDuration <= 0)
+                {
+                    return;
+                }
+
+                double stageProgress = Math.Max(0.0, Math.Min(1.0, currentSeconds / progressStageDuration));
+                double overallProgress = progressStageStart + stageProgress * progressStageSpan;
+                double percent = Math.Max(progressLastPercent, overallProgress * 100.0);
+                progressLastPercent = percent;
+                progressCurrentSeconds = Math.Min(currentSeconds, progressStageDuration);
+                progressTotalSeconds = progressStageDuration;
+
+                if (speedValue.HasValue && speedValue.Value > 0)
+                {
+                    progressLastSpeed = speedValue.Value;
+                }
+
+                if (progressLastSpeed > 0)
+                {
+                    double remaining = Math.Max(0.0, progressStageDuration - currentSeconds);
+                    progressEtaSeconds = remaining / progressLastSpeed;
+                }
+                else
+                {
+                    progressEtaSeconds = null;
+                }
+
+                progressBar1.Value = (int)Math.Max(0, Math.Min(100, percent));
+                ApplyProgressText();
+            });
+        }
+
+        private void PostToUi(Action action)
+        {
+            if (IsDisposed || Disposing || !IsHandleCreated)
             {
                 return;
             }
 
-            double stageProgress = Math.Max(0.0, Math.Min(1.0, currentSeconds / progressStageDuration));
-            double overallProgress = progressStageStart + stageProgress * progressStageSpan;
-            double percent = overallProgress * 100.0;
-            if (percent < progressLastPercent)
+            try
             {
-                percent = progressLastPercent;
+                if (InvokeRequired)
+                {
+                    BeginInvoke(action);
+                }
+                else
+                {
+                    action();
+                }
             }
-
-            progressLastPercent = percent;
-            progressCurrentSeconds = Math.Min(currentSeconds, progressStageDuration);
-            progressTotalSeconds = progressStageDuration;
-
-            if (speedValue.HasValue && speedValue.Value > 0)
+            catch (InvalidOperationException)
             {
-                progressLastSpeed = speedValue.Value;
-                double remaining = Math.Max(0.0, progressStageDuration - currentSeconds);
-                progressEtaSeconds = remaining / speedValue.Value;
+                // The window was closed between the lifecycle check and BeginInvoke.
             }
-            else if (progressLastSpeed > 0)
-            {
-                double remaining = Math.Max(0.0, progressStageDuration - currentSeconds);
-                progressEtaSeconds = remaining / progressLastSpeed;
-            }
-            else
-            {
-                progressEtaSeconds = null;
-            }
-
-            BeginInvoke((Action)(() =>
-            {
-                progressBar1.Value = (int)Math.Max(0, Math.Min(100, percent));
-                ApplyProgressText();
-            }));
         }
 
         private void ApplyProgressText()

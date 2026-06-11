@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -22,12 +21,13 @@ namespace DiscordVideoCompressor
         private readonly Func<double, int, double, double, List<DatamoshSegment>> buildDatamoshSegments;
         private readonly Func<long, int> selectAudioBitrate;
         private readonly ConversionText text;
+        private readonly Func<string> ffmpegPathProvider;
+        private readonly object processSync = new object();
 
         private Process ffmpegProcess;
-        private string extractedFfmpegPath;
 
         internal delegate string SpeedFilterBuilder(double duration, string resolution, string audioBitDepth, int outputAudioSampleRate, int inputAudioSampleRate, int videoFps, string extraVideoFilter, bool includeAudio, out string videoOutLabel, out string audioOutLabel);
-        internal delegate string DatamoshFilterBuilder(string resolution, string audioBitDepth, int outputAudioSampleRate, int videoFps, List<DatamoshSegment> segments, out string videoOutLabel, out string audioOutLabel);
+        internal delegate string DatamoshFilterBuilder(string resolution, string audioBitDepth, int outputAudioSampleRate, int videoFps, List<DatamoshSegment> segments, bool includeAudio, out string videoOutLabel, out string audioOutLabel);
 
         public FfmpegConversionService(
             Action<string, double, double, bool, double> setProgressStage,
@@ -38,7 +38,8 @@ namespace DiscordVideoCompressor
             DatamoshFilterBuilder buildDatamoshFilterComplex,
             Func<double, int, double, double, List<DatamoshSegment>> buildDatamoshSegments,
             Func<long, int> selectAudioBitrate,
-            ConversionText text)
+            ConversionText text,
+            Func<string> ffmpegPathProvider = null)
         {
             this.setProgressStage = setProgressStage;
             this.updateProgress = updateProgress;
@@ -49,6 +50,7 @@ namespace DiscordVideoCompressor
             this.buildDatamoshSegments = buildDatamoshSegments;
             this.selectAudioBitrate = selectAudioBitrate;
             this.text = text;
+            this.ffmpegPathProvider = ffmpegPathProvider ?? (() => FfmpegBinaryManager.GetOrExtract(typeof(FfmpegConversionService).Assembly, FfmpegResourceName));
         }
 
         public string ConvertFile(string sourcePath, ConversionOptions options, CancellationToken token, out string warningMessage)
@@ -59,50 +61,16 @@ namespace DiscordVideoCompressor
             string outputFile = Path.Combine(Path.GetDirectoryName(sourcePath), Path.GetFileNameWithoutExtension(sourcePath) + "_cnvrtd" + $".{outputFormat}");
             string ffmpegPath = GetFfmpegPath();
 
-            double duration = 0;
-            int inputAudioSampleRate = options.AudioSampleRate;
-            using (var probeProcess = new Process
+            token.ThrowIfCancellationRequested();
+            RunFfmpegProcess(ffmpegPath, $"-hide_banner -i \"{sourcePath}\"", token, false, 0, out StringBuilder probeOutput);
+            if (!MediaProbe.TryParse(probeOutput.ToString(), options.AudioSampleRate, out MediaProbeResult media))
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = ffmpegPath,
-                    Arguments = $"-i \"{sourcePath}\" -hide_banner",
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            })
-            {
-                probeProcess.Start();
-                string output = probeProcess.StandardError.ReadToEnd();
-                probeProcess.WaitForExit();
-
-                Match match = Regex.Match(output, @"Duration:\s(\d+):(\d+):(\d+\.?\d*)");
-                if (!match.Success)
-                {
-                    throw new InvalidOperationException(text.DurationError + "\n" + output);
-                }
-
-                int hours = int.Parse(match.Groups[1].Value);
-                int minutes = int.Parse(match.Groups[2].Value);
-                if (!double.TryParse(match.Groups[3].Value.Replace(",", "."), NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds))
-                {
-                    throw new InvalidOperationException(text.TimeConversionError);
-                }
-
-                duration = hours * 3600 + minutes * 60 + seconds;
-
-                Match audioMatch = Regex.Match(output, @"Audio:\s*([^,\s]+).*?(\d+)\s*Hz");
-                if (audioMatch.Success && int.TryParse(audioMatch.Groups[2].Value, out int parsedInputSampleRate) && parsedInputSampleRate > 0)
-                {
-                    inputAudioSampleRate = parsedInputSampleRate;
-                }
+                throw new InvalidOperationException(text.DurationError + "\n" + probeOutput);
             }
 
-            if (duration <= 0)
-            {
-                throw new InvalidOperationException(text.VideoDurationError);
-            }
+            double duration = media.Duration;
+            int inputAudioSampleRate = media.AudioSampleRate;
+            bool hasAudio = media.HasAudio;
 
             setProgressStage(text.ProgressStagePrepare, 0.0, 0.0, false, duration);
 
@@ -112,9 +80,9 @@ namespace DiscordVideoCompressor
                 : null;
             int datamoshPostSeed = datamoshSeed ^ 0x4f1bbc;
 
-            long targetBitrate = (long)((options.TargetSizeBytes * 8) / duration);
-            int audioBitrate = selectAudioBitrate(targetBitrate);
-            long videoBitrate = targetBitrate - audioBitrate;
+            long targetBitrate = (long)(options.TargetSizeBytes * 8.0 / duration);
+            int audioBitrate = hasAudio ? selectAudioBitrate(targetBitrate) : 0;
+            long videoBitrate = ConversionAlgorithms.CalculateVideoBitrate(options.TargetSizeBytes, duration, audioBitrate);
             ConversionValidationError validationError = ConversionValidation.ValidateRequest(File.Exists(sourcePath), options, outputFormat, videoBitrate);
             if (validationError != ConversionValidationError.None)
             {
@@ -138,12 +106,18 @@ namespace DiscordVideoCompressor
                 throw new InvalidOperationException(text.InvalidFileFormat);
             }
 
+            int outputAudioSampleRate = ConversionAlgorithms.NormalizeAudioSampleRate(outputFormat, options.AudioSampleRate);
+
             string videoFilter = buildVideoFilter(options.VideoResolution);
             string videoFilterArg = string.IsNullOrWhiteSpace(videoFilter) ? string.Empty : $" -vf \"{videoFilter}\"";
             string audioFilter = buildAudioFilter(options.AudioBitDepth);
             string audioFilterArg = string.IsNullOrWhiteSpace(audioFilter) ? string.Empty : $" -af \"{audioFilter}\"";
             string fpsArg = options.VideoFps > 0 ? $" -r {options.VideoFps}" : string.Empty;
             string pixelFormatArg = outputFormat == "mp4" ? " -pix_fmt yuv420p" : string.Empty;
+            string videoSpeedArgs = outputFormat == "mp4" ? " -preset veryfast" : " -deadline good -cpu-used 4";
+            string audioEncodeArgs = hasAudio
+                ? $" -b:a {audioBitrate} -c:a {codecAudio}{audioFilterArg} -ar {outputAudioSampleRate}"
+                : " -an";
 
             bool conversionSuccess = false;
             long currentVideoBitrate = videoBitrate;
@@ -163,7 +137,9 @@ namespace DiscordVideoCompressor
                     }
 
                     string passLogFileBase = null;
-                    string outputFileTemp = Path.Combine(Path.GetDirectoryName(outputFile), Path.GetFileNameWithoutExtension(outputFile) + ".tmp." + outputFormat);
+                    string outputFileTemp = Path.Combine(
+                        Path.GetDirectoryName(outputFile),
+                        $".{Path.GetFileNameWithoutExtension(outputFile)}.{Guid.NewGuid():N}.tmp.{outputFormat}");
                     string datamoshIntermediate = null;
                     string glitchIntermediate = null;
                     var tempFiles = new List<string>();
@@ -191,17 +167,19 @@ namespace DiscordVideoCompressor
                             glitchIntermediate = Path.Combine(tempDir, $"glitch_speed_{Guid.NewGuid():N}.{outputFormat}");
 
                             List<DatamoshSegment> segments = glitchSegments ?? buildDatamoshSegments(duration, datamoshSeed, options.GlitchJumpSeconds, options.GlitchChance);
-                            string glitchFilter = buildDatamoshFilterComplex(options.VideoResolution, options.AudioBitDepth, options.AudioSampleRate, options.VideoFps, segments, out string glitchVLabel, out string glitchALabel);
+                            string glitchFilter = buildDatamoshFilterComplex(options.VideoResolution, options.AudioBitDepth, outputAudioSampleRate, options.VideoFps, segments, hasAudio, out string glitchVLabel, out string glitchALabel);
                             string glitchScriptPath = WriteFilterScript(glitchFilter, tempFiles);
                             string glitchRateArgs = outputFormat == "mp4" ? $" -maxrate {currentVideoBitrate} -bufsize {currentVideoBitrate * 2}" : string.Empty;
-                            string glitchArgs = $"-i \"{sourcePath}\" -filter_complex_script \"{glitchScriptPath}\" -map \"{glitchVLabel}\" -map \"{glitchALabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{glitchRateArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {options.AudioSampleRate} -preset veryfast{pixelFormatArg} -y \"{glitchIntermediate}\"";
+                            string glitchMapArgs = BuildMapArgs(glitchVLabel, glitchALabel, hasAudio);
+                            string glitchArgs = $"-i \"{sourcePath}\" -filter_complex_script \"{glitchScriptPath}\"{glitchMapArgs} -c:v {codecVideo} -b:v {currentVideoBitrate}{glitchRateArgs}{audioEncodeArgs}{videoSpeedArgs}{pixelFormatArg} -y \"{glitchIntermediate}\"";
                             setProgressStage(text.ProgressStageGlitch, 0.0, 0.5, true, duration);
                             RunCheckedFfmpeg(ffmpegPath, glitchArgs, token, duration);
 
-                            string speedFilter = buildSpeedFilterComplex(duration, options.VideoResolution, options.AudioBitDepth, options.AudioSampleRate, options.AudioSampleRate, options.VideoFps, null, true, out string vOutLabel, out string aOutLabel);
+                            string speedFilter = buildSpeedFilterComplex(duration, options.VideoResolution, options.AudioBitDepth, outputAudioSampleRate, outputAudioSampleRate, options.VideoFps, null, hasAudio, out string vOutLabel, out string aOutLabel);
                             string speedScriptPath = WriteFilterScript(speedFilter, tempFiles);
                             string speedRateArgs = outputFormat == "mp4" ? $" -maxrate {currentVideoBitrate} -bufsize {currentVideoBitrate * 2}" : string.Empty;
-                            pass1Args = $"-i \"{glitchIntermediate}\" -filter_complex_script \"{speedScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{speedRateArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {options.AudioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
+                            string speedMapArgs = BuildMapArgs(vOutLabel, aOutLabel, hasAudio);
+                            pass1Args = $"-i \"{glitchIntermediate}\" -filter_complex_script \"{speedScriptPath}\"{speedMapArgs} -c:v {codecVideo} -b:v {currentVideoBitrate}{speedRateArgs}{audioEncodeArgs}{videoSpeedArgs}{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
                             pass1StageName = text.ProgressStageSpeed;
                             pass1StageStart = 0.5;
@@ -209,10 +187,11 @@ namespace DiscordVideoCompressor
                         }
                         else if (options.EnableSpeedEffect)
                         {
-                            string filterComplex = buildSpeedFilterComplex(duration, options.VideoResolution, options.AudioBitDepth, options.AudioSampleRate, inputAudioSampleRate, options.VideoFps, null, true, out string vOutLabel, out string aOutLabel);
+                            string filterComplex = buildSpeedFilterComplex(duration, options.VideoResolution, options.AudioBitDepth, outputAudioSampleRate, inputAudioSampleRate, options.VideoFps, null, hasAudio, out string vOutLabel, out string aOutLabel);
                             string filterScriptPath = WriteFilterScript(filterComplex, tempFiles);
                             string rateControlArgs = outputFormat == "mp4" ? $" -maxrate {currentVideoBitrate} -bufsize {currentVideoBitrate * 2}" : string.Empty;
-                            pass1Args = $"-i \"{sourcePath}\" -filter_complex_script \"{filterScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {options.AudioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
+                            string mapArgs = BuildMapArgs(vOutLabel, aOutLabel, hasAudio);
+                            pass1Args = $"-i \"{sourcePath}\" -filter_complex_script \"{filterScriptPath}\"{mapArgs} -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs}{audioEncodeArgs}{videoSpeedArgs}{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
                             pass1StageName = text.ProgressStageSpeed;
                         }
@@ -222,7 +201,7 @@ namespace DiscordVideoCompressor
                             Directory.CreateDirectory(tempDir);
                             datamoshIntermediate = Path.Combine(tempDir, $"datamosh_glitch_{Guid.NewGuid():N}.mp4");
 
-                            if (!RunTrueDatamoshPipeline(ffmpegPath, sourcePath, datamoshIntermediate, currentVideoBitrate, audioBitrate, options.AudioSampleRate, options.AudioBitDepth, options.VideoResolution, options.VideoFps, duration, datamoshSeed, 0.0, 0.6, token, out StringBuilder datamoshOutput, out bool datamoshHasAudio))
+                            if (!RunTrueDatamoshPipeline(ffmpegPath, sourcePath, datamoshIntermediate, currentVideoBitrate, audioBitrate, outputAudioSampleRate, options.AudioBitDepth, options.VideoResolution, options.VideoFps, duration, hasAudio, 0.0, 0.6, token, out StringBuilder datamoshOutput, out bool datamoshHasAudio))
                             {
                                 throw new InvalidOperationException(text.ConversionErrorPrefix + datamoshOutput);
                             }
@@ -233,10 +212,11 @@ namespace DiscordVideoCompressor
                             }
 
                             List<DatamoshSegment> segments = glitchSegments ?? buildDatamoshSegments(duration, datamoshPostSeed, options.GlitchJumpSeconds, options.GlitchChance);
-                            string filterComplex = buildDatamoshFilterComplex(options.VideoResolution, options.AudioBitDepth, options.AudioSampleRate, options.VideoFps, segments, out string vOutLabel, out string aOutLabel);
+                            string filterComplex = buildDatamoshFilterComplex(options.VideoResolution, options.AudioBitDepth, outputAudioSampleRate, options.VideoFps, segments, datamoshHasAudio, out string vOutLabel, out string aOutLabel);
                             string filterScriptPath = WriteFilterScript(filterComplex, tempFiles);
                             string rateControlArgs = outputFormat == "mp4" ? $" -maxrate {currentVideoBitrate} -bufsize {currentVideoBitrate * 2}" : string.Empty;
-                            pass1Args = $"-i \"{datamoshIntermediate}\" -filter_complex_script \"{filterScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {options.AudioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
+                            string mapArgs = BuildMapArgs(vOutLabel, aOutLabel, datamoshHasAudio);
+                            pass1Args = $"-i \"{datamoshIntermediate}\" -filter_complex_script \"{filterScriptPath}\"{mapArgs} -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs}{audioEncodeArgs}{videoSpeedArgs}{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
                             pass1StageName = text.ProgressStageGlitch;
                             pass1StageStart = 0.6;
@@ -244,7 +224,7 @@ namespace DiscordVideoCompressor
                         }
                         else if (options.EnableDatamosh)
                         {
-                            if (!RunTrueDatamoshPipeline(ffmpegPath, sourcePath, outputFileTemp, currentVideoBitrate, audioBitrate, options.AudioSampleRate, options.AudioBitDepth, options.VideoResolution, options.VideoFps, duration, datamoshSeed, 0.0, 1.0, token, out StringBuilder datamoshOutput, out bool datamoshHasAudio))
+                            if (!RunTrueDatamoshPipeline(ffmpegPath, sourcePath, outputFileTemp, currentVideoBitrate, audioBitrate, outputAudioSampleRate, options.AudioBitDepth, options.VideoResolution, options.VideoFps, duration, hasAudio, 0.0, 1.0, token, out StringBuilder datamoshOutput, out bool datamoshHasAudio))
                             {
                                 throw new InvalidOperationException(text.ConversionErrorPrefix + datamoshOutput);
                             }
@@ -260,18 +240,19 @@ namespace DiscordVideoCompressor
                         else if (options.EnableGlitchEffect)
                         {
                             List<DatamoshSegment> segments = glitchSegments ?? buildDatamoshSegments(duration, datamoshPostSeed, options.GlitchJumpSeconds, options.GlitchChance);
-                            string filterComplex = buildDatamoshFilterComplex(options.VideoResolution, options.AudioBitDepth, options.AudioSampleRate, options.VideoFps, segments, out string vOutLabel, out string aOutLabel);
+                            string filterComplex = buildDatamoshFilterComplex(options.VideoResolution, options.AudioBitDepth, outputAudioSampleRate, options.VideoFps, segments, hasAudio, out string vOutLabel, out string aOutLabel);
                             string filterScriptPath = WriteFilterScript(filterComplex, tempFiles);
                             string rateControlArgs = outputFormat == "mp4" ? $" -maxrate {currentVideoBitrate} -bufsize {currentVideoBitrate * 2}" : string.Empty;
-                            pass1Args = $"-i \"{sourcePath}\" -filter_complex_script \"{filterScriptPath}\" -map \"{vOutLabel}\" -map \"{aOutLabel}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs} -b:a {audioBitrate} -c:a {codecAudio} -ar {options.AudioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
+                            string mapArgs = BuildMapArgs(vOutLabel, aOutLabel, hasAudio);
+                            pass1Args = $"-i \"{sourcePath}\" -filter_complex_script \"{filterScriptPath}\"{mapArgs} -c:v {codecVideo} -b:v {currentVideoBitrate}{rateControlArgs}{audioEncodeArgs}{videoSpeedArgs}{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass2Args = null;
                             pass1StageName = text.ProgressStageGlitch;
                         }
                         else
                         {
                             passLogFileBase = CreatePassLogFileBase();
-                            pass1Args = $"-i \"{sourcePath}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{fpsArg}{videoFilterArg} -preset veryfast{pixelFormatArg} -pass 1 -passlogfile \"{passLogFileBase}\" -an -f null NUL";
-                            pass2Args = $"-i \"{sourcePath}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{fpsArg}{videoFilterArg} -pass 2 -passlogfile \"{passLogFileBase}\" -b:a {audioBitrate} -c:a {codecAudio}{audioFilterArg} -ar {options.AudioSampleRate} -preset veryfast{pixelFormatArg} -y \"{outputFileTemp}\"";
+                            pass1Args = $"-i \"{sourcePath}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{fpsArg}{videoFilterArg}{videoSpeedArgs}{pixelFormatArg} -pass 1 -passlogfile \"{passLogFileBase}\" -an -f null NUL";
+                            pass2Args = $"-i \"{sourcePath}\" -c:v {codecVideo} -b:v {currentVideoBitrate}{fpsArg}{videoFilterArg} -pass 2 -passlogfile \"{passLogFileBase}\"{audioEncodeArgs}{videoSpeedArgs}{pixelFormatArg} -y \"{outputFileTemp}\"";
                             pass1StageName = text.ProgressStagePass1;
                             pass1StageSpan = 0.5;
                             pass2StageName = text.ProgressStagePass2;
@@ -309,6 +290,10 @@ namespace DiscordVideoCompressor
                         {
                             double sizeRatio = (double)options.TargetSizeBytes / Math.Max(1L, fileInfo.Length);
                             currentVideoBitrate = (long)(currentVideoBitrate * sizeRatio * 0.95);
+                            if (currentVideoBitrate <= 0)
+                            {
+                                throw new InvalidOperationException(text.BitrateError);
+                            }
                         }
                     }
                     finally
@@ -320,6 +305,8 @@ namespace DiscordVideoCompressor
                         {
                             TryDeleteFile(tempFile);
                         }
+
+                        TryDeleteFile(outputFileTemp);
                     }
                 }
                 while (!conversionSuccess);
@@ -334,16 +321,22 @@ namespace DiscordVideoCompressor
 
         public void Cancel()
         {
-            if (ffmpegProcess == null)
+            Process process;
+            lock (processSync)
+            {
+                process = ffmpegProcess;
+            }
+
+            if (process == null)
             {
                 return;
             }
 
             try
             {
-                if (!ffmpegProcess.HasExited)
+                if (!process.HasExited)
                 {
-                    ffmpegProcess.Kill();
+                    process.Kill(true);
                 }
             }
             catch (Exception ex)
@@ -352,10 +345,10 @@ namespace DiscordVideoCompressor
             }
         }
 
-        private bool RunTrueDatamoshPipeline(string ffmpegPath, string inputFile, string outputFileTemp, long videoBitrate, int audioBitrate, int audioSampleRate, string audioBitDepth, string videoResolution, int videoFps, double duration, int seed, double stageStart, double stageSpan, CancellationToken token, out StringBuilder outputLog, out bool outputHasAudio)
+        private bool RunTrueDatamoshPipeline(string ffmpegPath, string inputFile, string outputFileTemp, long videoBitrate, int audioBitrate, int audioSampleRate, string audioBitDepth, string videoResolution, int videoFps, double duration, bool inputHasAudio, double stageStart, double stageSpan, CancellationToken token, out StringBuilder outputLog, out bool outputHasAudio)
         {
             outputLog = new StringBuilder();
-            outputHasAudio = true;
+            outputHasAudio = inputHasAudio;
             string tempDir = Path.Combine(Path.GetTempPath(), "DiscordVideoCompressor");
             Directory.CreateDirectory(tempDir);
 
@@ -382,8 +375,8 @@ namespace DiscordVideoCompressor
 
                 token.ThrowIfCancellationRequested();
 
-                // Datamosh byte-level transform stays in the form helper for now.
-                if (!ApplyDatamoshTransform(rawVideoPath, moshVideoPath, duration, videoFps, seed, token, out string transformError))
+                setProgressStage(text.ProgressStageDatamoshTransform, stageStart + stageSpan * 0.45, stageSpan * 0.1, false, duration);
+                if (!DatamoshTransformer.Transform(rawVideoPath, moshVideoPath, token, out string transformError))
                 {
                     outputLog.Append(transformError);
                     return false;
@@ -395,7 +388,11 @@ namespace DiscordVideoCompressor
                 string audioFilter = buildAudioFilter(audioBitDepth);
                 string audioFilterArg = string.IsNullOrWhiteSpace(audioFilter) ? string.Empty : $" -af \"{audioFilter}\"";
                 string rateControlArgs = $" -maxrate {videoBitrate} -bufsize {videoBitrate * 2}";
-                string remuxArgs = $"{inputFpsArg} -fflags +genpts -i \"{moshVideoPath}\" -i \"{inputFile}\" -map 0:v:0 -map 1:a:0? -c:v libx264 -b:v {videoBitrate}{rateControlArgs} -preset veryfast -pix_fmt yuv420p -bf 0 -c:a aac -b:a {audioBitrate}{audioFilterArg} -ar {audioSampleRate} -shortest -movflags +faststart -y \"{outputFileTemp}\"";
+                string audioMapArgs = inputHasAudio ? " -map 1:a:0" : string.Empty;
+                string audioEncodeArgs = inputHasAudio
+                    ? $" -c:a aac -b:a {audioBitrate}{audioFilterArg} -ar {audioSampleRate} -shortest"
+                    : " -an";
+                string remuxArgs = $"{inputFpsArg} -fflags +genpts -i \"{moshVideoPath}\" -i \"{inputFile}\" -map 0:v:0{audioMapArgs} -c:v libx264 -b:v {videoBitrate}{rateControlArgs} -preset veryfast -pix_fmt yuv420p -bf 0{audioEncodeArgs} -movflags +faststart -y \"{outputFileTemp}\"";
                 setProgressStage(text.ProgressStageDatamoshRemux, stageStart + stageSpan * 0.55, stageSpan * 0.45, true, duration);
                 if (!RunFfmpegProcess(ffmpegPath, remuxArgs, token, true, duration, out StringBuilder remuxOutput))
                 {
@@ -403,7 +400,6 @@ namespace DiscordVideoCompressor
                     return false;
                 }
 
-                outputHasAudio = ProbeHasAudio(ffmpegPath, outputFileTemp);
                 return true;
             }
             finally
@@ -413,176 +409,7 @@ namespace DiscordVideoCompressor
             }
         }
 
-        private bool ApplyDatamoshTransform(string inputPath, string outputPath, double duration, int videoFps, int seed, CancellationToken token, out string error)
-        {
-            error = string.Empty;
-
-            byte[] data;
-            try
-            {
-                data = File.ReadAllBytes(inputPath);
-            }
-            catch (Exception ex)
-            {
-                error = "Failed to read datamosh source: " + ex.Message;
-                return false;
-            }
-
-            List<(int Index, int Length)> nalStarts = FindNalStartCodes(data);
-            if (nalStarts.Count == 0)
-            {
-                error = "Datamosh failed: no NAL units found.";
-                return false;
-            }
-
-            int fps = videoFps > 0 ? videoFps : 60;
-            var rng = new Random(seed);
-            int frameIndex = 0;
-            int idrIndex = 0;
-            int convertedIdr = 0;
-            var idrHeaders = new List<int>();
-
-            setProgressStage(text.ProgressStageDatamoshTransform, 0.45, 0.1, false, duration);
-
-            for (int i = 0; i < nalStarts.Count; i++)
-            {
-                token.ThrowIfCancellationRequested();
-
-                (int Index, int Length) current = nalStarts[i];
-                int nextStart = i + 1 < nalStarts.Count ? nalStarts[i + 1].Index : data.Length;
-                int headerIndex = current.Index + current.Length;
-                if (headerIndex >= nextStart)
-                {
-                    continue;
-                }
-
-                byte nalHeader = data[headerIndex];
-                int nalType = nalHeader & 0x1F;
-                if (nalType == 1 || nalType == 5)
-                {
-                    if (nalType == 5)
-                    {
-                        if (idrIndex > 0)
-                        {
-                            idrHeaders.Add(headerIndex);
-                            data[headerIndex] = (byte)((nalHeader & 0xE0) | 0x01);
-                            convertedIdr++;
-                        }
-
-                        idrIndex++;
-                    }
-
-                    frameIndex++;
-                }
-            }
-
-            if (convertedIdr == 0 && idrHeaders.Count > 0)
-            {
-                int pick = idrHeaders[rng.Next(idrHeaders.Count)];
-                data[pick] = (byte)((data[pick] & 0xE0) | 0x01);
-            }
-
-            try
-            {
-                File.WriteAllBytes(outputPath, data);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                error = "Failed to write datamosh output: " + ex.Message;
-                return false;
-            }
-        }
-
-        private bool ProbeHasAudio(string ffmpegPath, string filePath)
-        {
-            try
-            {
-                using var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = ffmpegPath,
-                        Arguments = $"-i \"{filePath}\" -hide_banner",
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-
-                process.Start();
-                string output = process.StandardError.ReadToEnd();
-                process.WaitForExit();
-                return Regex.IsMatch(output, @"Audio:\s", RegexOptions.IgnoreCase);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private List<(int Index, int Length)> FindNalStartCodes(byte[] data)
-        {
-            var starts = new List<(int Index, int Length)>();
-            for (int i = 0; i < data.Length - 3; i++)
-            {
-                if (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x01)
-                {
-                    starts.Add((i, 3));
-                    i += 2;
-                    continue;
-                }
-
-                if (i < data.Length - 4 && data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x00 && data[i + 3] == 0x01)
-                {
-                    starts.Add((i, 4));
-                    i += 3;
-                }
-            }
-
-            return starts;
-        }
-
-        private string ExtractFfmpeg()
-        {
-            if (!string.IsNullOrEmpty(extractedFfmpegPath) && File.Exists(extractedFfmpegPath))
-            {
-                return extractedFfmpegPath;
-            }
-
-            string tempDir = Path.Combine(Path.GetTempPath(), "DiscordVideoCompressor");
-            string ffmpegPath = Path.Combine(tempDir, $"ffmpeg_{Guid.NewGuid():N}.exe");
-            Directory.CreateDirectory(tempDir);
-            using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(FfmpegResourceName)
-                ?? throw new InvalidOperationException($"Embedded ffmpeg resource '{FfmpegResourceName}' was not found."))
-            using (FileStream outputStream = new FileStream(ffmpegPath, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
-                resourceStream.CopyTo(outputStream);
-                outputStream.Flush();
-            }
-
-            ValidateExtractedFfmpeg(ffmpegPath);
-            extractedFfmpegPath = ffmpegPath;
-            return ffmpegPath;
-        }
-
-        private string GetFfmpegPath() => ExtractFfmpeg();
-
-        private void ValidateExtractedFfmpeg(string ffmpegPath)
-        {
-            using FileStream stream = new FileStream(ffmpegPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            if (stream.Length < 2)
-            {
-                throw new InvalidOperationException("Embedded ffmpeg resource is invalid or incomplete.");
-            }
-
-            int firstByte = stream.ReadByte();
-            int secondByte = stream.ReadByte();
-            if (firstByte != 'M' || secondByte != 'Z')
-            {
-                throw new InvalidOperationException("Embedded ffmpeg resource is invalid. Rebuild the application with a valid ffmpeg.exe payload.");
-            }
-        }
+        private string GetFfmpegPath() => ffmpegPathProvider();
 
         private string MapValidationError(ConversionValidationError error)
         {
@@ -608,7 +435,7 @@ namespace DiscordVideoCompressor
         private bool RunFfmpegProcess(string ffmpegPath, string arguments, CancellationToken token, bool captureProgress, double duration, out StringBuilder stdErrOutput)
         {
             stdErrOutput = new StringBuilder();
-            ffmpegProcess = new Process
+            using var process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
@@ -622,15 +449,20 @@ namespace DiscordVideoCompressor
 
             try
             {
-                ffmpegProcess.Start();
+                lock (processSync)
+                {
+                    ffmpegProcess = process;
+                }
+
+                process.Start();
                 Regex timeRegex = captureProgress ? new Regex(@"time=(\d+):(\d+):(\d+\.?\d*)") : null;
                 Regex speedRegex = captureProgress ? new Regex(@"speed=([0-9]+(?:[\.,][0-9]+)?)x") : null;
                 string stdErrLine;
 
-                while ((stdErrLine = ffmpegProcess.StandardError.ReadLine()) != null)
+                while ((stdErrLine = process.StandardError.ReadLine()) != null)
                 {
                     token.ThrowIfCancellationRequested();
-                    stdErrOutput.AppendLine(stdErrLine);
+                    AppendBoundedOutput(stdErrOutput, stdErrLine);
 
                     if (captureProgress)
                     {
@@ -658,8 +490,9 @@ namespace DiscordVideoCompressor
                     }
                 }
 
-                ffmpegProcess.WaitForExit();
-                return ffmpegProcess.ExitCode == 0;
+                process.WaitForExit();
+                token.ThrowIfCancellationRequested();
+                return process.ExitCode == 0;
             }
             catch (OperationCanceledException)
             {
@@ -668,9 +501,35 @@ namespace DiscordVideoCompressor
             }
             finally
             {
-                ffmpegProcess?.Dispose();
-                ffmpegProcess = null;
+                lock (processSync)
+                {
+                    if (ReferenceEquals(ffmpegProcess, process))
+                    {
+                        ffmpegProcess = null;
+                    }
+                }
             }
+        }
+
+        private static void AppendBoundedOutput(StringBuilder output, string line)
+        {
+            const int maxCharacters = 128 * 1024;
+            output.AppendLine(line);
+            if (output.Length > maxCharacters)
+            {
+                output.Remove(0, output.Length - maxCharacters);
+            }
+        }
+
+        private static string BuildMapArgs(string videoLabel, string audioLabel, bool includeAudio)
+        {
+            string result = $" -map \"{videoLabel}\"";
+            if (includeAudio && !string.IsNullOrWhiteSpace(audioLabel))
+            {
+                result += $" -map \"{audioLabel}\"";
+            }
+
+            return result;
         }
 
         private void TryDeleteFile(string path)

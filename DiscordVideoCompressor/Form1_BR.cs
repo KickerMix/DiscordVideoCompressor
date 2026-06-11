@@ -18,6 +18,7 @@ namespace DiscordVideoCompressor
         private readonly FfmpegConversionService conversionService;
         private readonly string startupInputFile;
         private readonly bool copyOutputToClipboardOnSuccess;
+        private readonly ToolStripStatusLabel statusLabelLicenses;
         private bool startupConversionStarted;
         private double progressStageStart;
         private double progressStageSpan = 1.0;
@@ -38,6 +39,13 @@ namespace DiscordVideoCompressor
         public Form1(string startupInputFile = null, bool copyOutputToClipboardOnSuccess = false)
         {
             InitializeComponent();
+            statusLabelLicenses = new ToolStripStatusLabel
+            {
+                IsLink = true,
+                LinkColor = System.Drawing.Color.LightSkyBlue
+            };
+            statusLabelLicenses.Click += statusLabelLicenses_Click;
+            statusStrip1.Items.Add(statusLabelLicenses);
             this.startupInputFile = startupInputFile;
             this.copyOutputToClipboardOnSuccess = copyOutputToClipboardOnSuccess;
             conversionService = new FfmpegConversionService(
@@ -153,7 +161,6 @@ namespace DiscordVideoCompressor
             Thread.CurrentThread.CurrentUICulture = culture;
             Thread.CurrentThread.CurrentCulture = culture;
             Application.CurrentCulture = culture;
-            Application.DoEvents();
             UpdateUI();
         }
 
@@ -172,6 +179,7 @@ namespace DiscordVideoCompressor
             checkBoxSpeedEffect.Text = Resources.Strings.BrainrotSpeedEffectText;
             checkBoxDatamosh.Text = Resources.Strings.BrainrotDatamoshEffectText;
             checkBoxGlitchEffect.Text = Resources.Strings.BrainrotGlitchEffectText;
+            statusLabelLicenses.Text = Resources.Strings.LicensesLabelText;
             labelGlitchLength.Text = Resources.Strings.GlitchJumpLengthLabelText;
             labelGlitchChance.Text = Resources.Strings.GlitchChanceLabelText;
             UpdateSelectedFileLabel();
@@ -239,7 +247,7 @@ namespace DiscordVideoCompressor
                 {
                     if (copyOutputToClipboardAfterSuccess)
                     {
-                        TryCopyOutputFileToClipboard(createdFile);
+                        await TryCopyOutputFileToClipboardAsync(createdFile);
                     }
 
                     MessageBox.Show(Resources.Strings.ConversionSuccessMessage + createdFile, Resources.Strings.SuccessTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -287,7 +295,7 @@ namespace DiscordVideoCompressor
             await StartConversionAsync(copyOutputToClipboardOnSuccess);
         }
 
-        private void TryCopyOutputFileToClipboard(string filePath)
+        private async Task TryCopyOutputFileToClipboardAsync(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
             {
@@ -306,7 +314,7 @@ namespace DiscordVideoCompressor
                 }
                 catch (ExternalException)
                 {
-                    Thread.Sleep(100);
+                    await Task.Delay(100);
                 }
                 catch (Exception ex)
                 {
@@ -336,6 +344,16 @@ namespace DiscordVideoCompressor
             SetComboBoxValue(comboBoxBitDepth, "s16");
             SetComboBoxValue(comboBoxSampleRate, "44100");
             SetComboBoxValue(comboBoxVideoFps, "60");
+        }
+
+        private void statusLabelLicenses_Click(object sender, EventArgs e)
+        {
+            string version = Application.ProductVersion;
+            MessageBox.Show(
+                $"Discord Video Compressor {version}\n\n{Resources.Strings.LicensesMessageText}",
+                Resources.Strings.LicensesLabelText,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
         private void Form1_Load(object sender, EventArgs e)

@@ -1,26 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <RootNamespace>DiscordVideoCompressor</RootNamespace>
     <AssemblyName>DiscordVideoCompressor</AssemblyName>
     <Version>1.1.5</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>KickerMix</Authors>
     <Company>KickerMix</Company>
     <Product>Discord Video Compressor</Product>
+    <Copyright>Copyright © 2024-2026 KickerMix</Copyright>
     <Description>Windows video compressor for Discord size limits with embedded ffmpeg.</Description>
     <ApplicationIcon>pk_icon.ico</ApplicationIcon>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277;NETSDK1187</MSBuildWarningsAsMessages>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NetSparkleUpdater.UI.WinForms.NetCore" Version="3.0.4" />
+    <PackageReference Include="NetSparkleUpdater.UI.WinForms.NetCore" Version="3.1.0" />
     <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
   </ItemGroup>
 
@@ -30,6 +32,8 @@
     <Compile Remove="Main.Designer.cs" />
     <EmbeddedResource Remove="Main.resx" />
     <EmbeddedResource Include="Resources\ffmpeg.exe" LogicalName="DiscordVideoCompressor.Resources.ffmpeg.exe" />
+    <None Include="..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\FFMPEG-GPL-LICENSE.txt" Link="FFMPEG-GPL-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
 
     <Compile Update="Form1_BR.Designer.cs">
       <DependentUpon>Form1_BR.cs</DependentUpon>
